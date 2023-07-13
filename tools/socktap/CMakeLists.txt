@@ -12,6 +12,7 @@ find_package(Threads REQUIRED)
 
 add_executable(socktap
     application.cpp
+    mco_fac.cpp
     benchmark_application.cpp
     cam_application.cpp
     dcc_passthrough.cpp

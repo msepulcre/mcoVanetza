@@ -81,7 +81,7 @@ add_subdirectory(vanetza/net)
 add_subdirectory(vanetza/security)
 add_subdirectory(vanetza/units)
 
-option(BUILD_SOCKTAP "Build socktap application" OFF)
+option(BUILD_SOCKTAP "Build socktap application" ON)
 if(BUILD_SOCKTAP)
   add_subdirectory(tools/socktap)
 endif()
