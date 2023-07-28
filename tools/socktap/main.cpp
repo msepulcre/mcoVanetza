@@ -1,3 +1,4 @@
+#include "mco_fac.hpp"
 #include "ethernet_device.hpp"
 #include "benchmark_application.hpp"
 #include "cam_application.hpp"
@@ -11,6 +12,8 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
+
+
 
 namespace asio = boost::asio;
 namespace gn = vanetza::geonet;
@@ -28,6 +31,7 @@ int main(int argc, const char** argv)
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
         ("cam-interval", po::value<unsigned>()->default_value(1000), "CAM sending interval in milliseconds.")
+        // cbr
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -125,6 +129,11 @@ int main(int argc, const char** argv)
         RouterContext context(mib, trigger, *positioning, security.get());
         context.require_position_fix(vm.count("require-gnss-fix") > 0);
         context.set_link_layer(link_layer.get());
+        
+        
+        std::unique_ptr<McoFac> mco  {
+            new McoFac(*positioning, trigger.runtime())
+        };
 
         std::map<std::string, std::unique_ptr<Application>> apps;
         for (const std::string& app_name : vm["applications"].as<std::vector<std::string>>()) {
@@ -133,14 +142,64 @@ int main(int argc, const char** argv)
                 continue;
             }
 
+            
+
             if (app_name == "ca") {
-                std::unique_ptr<CamApplication> ca {
+
+                /* std::unique_ptr<CamApplication> ca {
                     new CamApplication(*positioning, trigger.runtime())
+                }; */
+
+                
+
+                std::unique_ptr<CamApplication> ca {  
+                    new CamApplication(*mco, *positioning, trigger.runtime())
                 };
-                ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
+                
+                ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
                 ca->print_received_message(vm.count("print-rx-cam") > 0);
                 ca->print_generated_message(vm.count("print-tx-cam") > 0);
                 apps.emplace(app_name, std::move(ca));
+                
+
+                /////////////////////////////////////////////////////////////A partir de aqui CAs de prueba
+
+                /* std::unique_ptr<CamApplication> ca2 {  
+                    new CamApplication(*onemco, *positioning, trigger.runtime())
+                };
+                
+                ca2->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
+                ca2->print_received_message(vm.count("print-rx-cam") > 0);
+                ca2->print_generated_message(vm.count("print-tx-cam") > 0);
+                apps.emplace("ca2", std::move(ca2));
+                
+
+
+                std::unique_ptr<CamApplication> ca3 {  
+                    new CamApplication(*onemco, *positioning, trigger.runtime())
+                };
+                
+                ca3->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
+                ca3->print_received_message(vm.count("print-rx-cam") > 0);
+                ca3->print_generated_message(vm.count("print-tx-cam") > 0);
+                apps.emplace("c3", std::move(ca3));
+
+
+                std::unique_ptr<CamApplication> ca4 {  
+                    new CamApplication(*onemco, *positioning, trigger.runtime())
+                };
+                
+                ca4->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
+                ca4->print_received_message(vm.count("print-rx-cam") > 0);
+                ca4->print_generated_message(vm.count("print-tx-cam") > 0);
+                apps.emplace("c4", std::move(ca4)); */
+
+                /////////////////////////////////////////////////////////////Hasta aqui Cas de prueba
+
+                apps.emplace("mco", std::move(mco));
+
+
+                
             } else if (app_name == "hello") {
                 std::unique_ptr<HelloApplication> hello {
                     new HelloApplication(io_service, std::chrono::milliseconds(800))

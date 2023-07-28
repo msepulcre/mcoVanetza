@@ -16,10 +16,20 @@ using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
 
-CamApplication::CamApplication(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), cam_interval_(seconds(1))
+/* CamApplication::CamApplication(PositionProvider& positioning, Runtime& rt) :
+    positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), onemco_(McoFac(positioning, rt))
+{   
+    schedule_timer();
+    //Que hago con el onemco_?
+} */
+
+
+CamApplication::CamApplication(McoFac &mco, PositionProvider& positioning, Runtime& rt) :
+   mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1))
 {
     schedule_timer();
+    app_name = mco.register_app();
+
 }
 
 void CamApplication::set_interval(Clock::duration interval)
@@ -128,8 +138,14 @@ void CamApplication::on_timer(Clock::time_point)
     request.transport_type = geonet::TransportType::SHB;
     request.communication_profile = geonet::CommunicationProfile::ITS_G5;
 
-    auto confirm = Application::request(request, std::move(packet));
+    /* auto confirm = Application::request(request, std::move(packet)); */
+
+    std::cout << "Se va a transmitir un paquete de la aplicacion" << app_name << std::endl;
+
+    auto confirm = mco_.mco_data_request(request, std::move(packet), app_name); 
     if (!confirm.accepted()) {
         throw std::runtime_error("CAM application data request failed");
     }
+    
+    
 }

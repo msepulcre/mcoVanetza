@@ -26,7 +26,7 @@ public:
 
     virtual PortType port() = 0;
     virtual PromiscuousHook* promiscuous_hook();
-
+    
 protected:
     DataConfirm request(const DataRequest&, DownPacketPtr);
 
