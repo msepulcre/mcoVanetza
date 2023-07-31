@@ -26,8 +26,36 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
     std::cout << "Tamaño del paquete: " << packet->size() << std::endl;
+
+    register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    
     confirm = Application::request(request, std::move(packet));
     return confirm;
+}
+
+void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTime ){
+
+    McoAppRegister* app_registered;
+
+    for(McoAppRegister&iter : my_list){
+
+        if(iter.app_name == app_name){
+            
+            app_registered = &iter;
+            break;
+
+        }
+
+    }
+
+    app_registered->msg_data_list.push_back({msgSize, msgTime});
+
+    std::cout << "El tamaño de la lista de datos de " << app_registered->app_name << " es " 
+    << app_registered->msg_data_list.size() << std::endl;
+    
+    
+    //buscar en my_list el registro de la aplicacion y luego añadir a la lista de datos los datos actuales
+
 }
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
@@ -71,8 +99,7 @@ std::string McoFac::register_app(){
 
         if(!name_used){
 
-            McoAppRegister *myMcoApp = new McoAppRegister(app_name);
-            my_list.push_back(myMcoApp);
+            my_list.push_back(McoAppRegister(app_name));
             std::cout << "Se ha registrado la aplicacion con el nombre: " << app_name << std::endl;
 
         } else{
@@ -85,6 +112,42 @@ std::string McoFac::register_app(){
     std::cout << "El numero de aplicaciones registradas es: " << my_list.size() << std::endl;
 
     return app_name;
+
+}
+
+void McoFac::clean_outdated(){
+
+    //asumo que tengo que sacar el tiempo de mi ordenador y no el tiempo que marca alguna funcionn de vanetza
+    //de la forma en la que he hecho el codigo, current time tiene un error creciente por cada iteracion, lo hago de otra forma?
+
+    const float delated_time = 5000;
+    auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    std::cout << "El tiempo actual es: " << current_time << std::endl;
+
+
+    for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
+
+        std::cout << "Hay " << iter_app->msg_data_list.size() << " msg_data_register en la aplicacion" << iter_app->app_name << std::endl;
+
+        for(auto iter_data = iter_app->msg_data_list.begin() ; iter_data != iter_app->msg_data_list.end() ;){
+
+            if(current_time - iter_data->msgTime > delated_time){
+
+                iter_data = iter_app->msg_data_list.erase(iter_data);
+                std::cout << "Se ha eliminado 1 dato de msg_data_registered" << std::endl;
+
+            }
+            else {
+
+                ++iter_data;
+
+            }
+
+        }
+
+        std::cout << "Quedan " << iter_app->msg_data_list.size() << " msg_data_register en la aplicacion" << iter_app->app_name << std::endl;
+    }
 
 }
 
@@ -129,7 +192,15 @@ void McoFac::schedule_timer()
 
 void McoFac::on_timer(Clock::time_point)
 {
+    
     schedule_timer();
+
+    clean_outdated();
+
+
+    
+
+
 
     // clean
     //  cbr = x => delta = y

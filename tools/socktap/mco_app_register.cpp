@@ -7,16 +7,15 @@
 McoAppRegister::McoAppRegister(){
 
     app_name = "";
-    msgSize = 0;
-    msgInterval = 0;
+    msg_data_list.push_back( { 0 , 0 });
 
 }
 
 McoAppRegister::McoAppRegister(std::string cadena){
     
     app_name.assign(cadena);
-    msgSize = 0;
-    msgInterval = 0;
+    msg_data_list.push_back({ 0 , 0});
+
 
 }
 
@@ -24,15 +23,19 @@ McoAppRegister::McoAppRegister(std::string cadena){
 McoAppRegister::McoAppRegister(McoAppRegister *appCopied){
 
     app_name.assign(appCopied->app_name);
-    msgSize = appCopied->msgSize;
-    msgInterval = appCopied->msgInterval;
+    
+    for(MsgData &iter : appCopied->msg_data_list){
+
+        msg_data_list.push_back({ iter.msgSize , iter.msgTime});
+
+    }
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, float size, float interval){
+McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time){
 
     app_name.assign(cadena);
-    msgSize = size;
-    msgInterval = interval;
+    msg_data_list.push_back({size , time});
 
 }
+

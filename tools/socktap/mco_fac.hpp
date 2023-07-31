@@ -7,6 +7,7 @@
 #include <list>
 #include <cstring>
 #include <string.h>
+#include <chrono>
 #include <vanetza/common/clock.hpp>
 #include <vanetza/common/position_provider.hpp>
 #include <vanetza/common/runtime.hpp>
@@ -26,7 +27,11 @@ public:
 
     std::string register_app();
 
+    void register_packet(std::string app_name, float msgSize, int64_t msgTime);
+
     std::string rand_name();
+    
+    void clean_outdated();
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;

@@ -4,19 +4,27 @@
 #include <iostream>
 #include <string.h>
 #include <cstring>
+#include <list>
 
 class McoAppRegister
 {
 public:
     
     std::string app_name;
-    float msgSize;
-    float msgInterval;
+    
+    struct MsgData{
 
+        float msgSize;
+        int64_t msgTime;  
+
+    };
+
+    std::list<MsgData> msg_data_list;
+    
     McoAppRegister();
     McoAppRegister(std::string cadena);
     McoAppRegister(McoAppRegister *appCopied);
-    McoAppRegister(std::string cadena, float size, float interval);
+    McoAppRegister(std::string cadena, float size, int64_t interval);
 
 };
 

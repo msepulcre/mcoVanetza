@@ -140,7 +140,7 @@ void CamApplication::on_timer(Clock::time_point)
 
     /* auto confirm = Application::request(request, std::move(packet)); */
 
-    std::cout << "Se va a transmitir un paquete de la aplicacion" << app_name << std::endl;
+    std::cout << "Se va a transmitir un paquete de la aplicacion: " << app_name << std::endl;
 
     auto confirm = mco_.mco_data_request(request, std::move(packet), app_name); 
     if (!confirm.accepted()) {
