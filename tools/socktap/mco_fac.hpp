@@ -56,7 +56,7 @@ private:
 
     vanetza::PositionProvider& positioning_;
     vanetza::Runtime& runtime_;
-    vanetza::Clock::duration cam_interval_;
+    vanetza::Clock::duration mco_interval_;
     bool print_rx_msg_ = false;
     bool print_tx_msg_ = false;
 };

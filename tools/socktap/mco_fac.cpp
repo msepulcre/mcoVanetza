@@ -26,6 +26,8 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
     std::cout << "Tamaño del paquete: " << packet->size() << std::endl;
+    std::cout << "El paquete se envia en el momento: " 
+    << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <<std::endl;
 
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
@@ -59,7 +61,7 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
 }
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), cam_interval_(seconds(1))
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100))
 {
     schedule_timer();
 }
@@ -119,6 +121,7 @@ void McoFac::clean_outdated(){
 
     //asumo que tengo que sacar el tiempo de mi ordenador y no el tiempo que marca alguna funcionn de vanetza
     //de la forma en la que he hecho el codigo, current time tiene un error creciente por cada iteracion, lo hago de otra forma?
+    //no se por que, a veces deja 5 y a veces 6 registros de datos, hay que mirarlo
 
     const float delated_time = 5000;
     auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -153,7 +156,7 @@ void McoFac::clean_outdated(){
 
 void McoFac::set_interval(Clock::duration interval)
 {
-    cam_interval_ = interval;
+    mco_interval_ = interval;
     runtime_.cancel(this);
     schedule_timer();
 }
@@ -187,7 +190,7 @@ void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
 
 void McoFac::schedule_timer()
 {
-    runtime_.schedule(cam_interval_, std::bind(&McoFac::on_timer, this, std::placeholders::_1), this);
+    runtime_.schedule(mco_interval_, std::bind(&McoFac::on_timer, this, std::placeholders::_1), this);
 }
 
 void McoFac::on_timer(Clock::time_point)
@@ -196,6 +199,8 @@ void McoFac::on_timer(Clock::time_point)
     schedule_timer();
 
     clean_outdated();
+
+    
 
 
     
