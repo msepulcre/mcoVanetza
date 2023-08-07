@@ -25,9 +25,6 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
 {
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
-    std::cout << "Tamaño del paquete: " << packet->size() << std::endl;
-    std::cout << "El paquete se envia en el momento: " 
-    << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <<std::endl;
 
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
@@ -55,8 +52,6 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
     std::cout << "El tamaño de la lista de datos de " << app_registered->app_name << " es " 
     << app_registered->msg_data_list.size() << std::endl;
     
-    
-    //buscar en my_list el registro de la aplicacion y luego añadir a la lista de datos los datos actuales
 
 }
 
@@ -78,9 +73,9 @@ std::string McoFac::rand_name(){
 }
 
 bool McoFac::search_in_list(std::string app_name){
-    for(auto aplicacion : my_list){
+    for(auto iter : my_list){
 
-        if(aplicacion.app_name == app_name){
+        if(iter.app_name == app_name){
 
             return true;
         }
@@ -119,26 +114,16 @@ std::string McoFac::register_app(){
 
 void McoFac::clean_outdated(){
 
-    //asumo que tengo que sacar el tiempo de mi ordenador y no el tiempo que marca alguna funcionn de vanetza
-    //de la forma en la que he hecho el codigo, current time tiene un error creciente por cada iteracion, lo hago de otra forma?
-    //no se por que, a veces deja 5 y a veces 6 registros de datos, hay que mirarlo
-
     const float delated_time = 5000;
     auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    std::cout << "El tiempo actual es: " << current_time << std::endl;
-
-
     for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
-
-        std::cout << "Hay " << iter_app->msg_data_list.size() << " msg_data_register en la aplicacion" << iter_app->app_name << std::endl;
 
         for(auto iter_data = iter_app->msg_data_list.begin() ; iter_data != iter_app->msg_data_list.end() ;){
 
             if(current_time - iter_data->msgTime > delated_time){
 
                 iter_data = iter_app->msg_data_list.erase(iter_data);
-                std::cout << "Se ha eliminado 1 dato de msg_data_registered" << std::endl;
 
             }
             else {
@@ -149,7 +134,54 @@ void McoFac::clean_outdated(){
 
         }
 
-        std::cout << "Quedan " << iter_app->msg_data_list.size() << " msg_data_register en la aplicacion" << iter_app->app_name << std::endl;
+    }
+
+}
+
+void McoFac::apps_average_size(){
+
+    for(McoAppRegister& iter_app : my_list){
+        
+        int num_iter_data = 0;
+        float data_sum = 0;
+
+        for(auto iter_data : iter_app.msg_data_list ){
+
+            data_sum = data_sum + iter_data.msgSize;
+            num_iter_data++;
+
+        }
+
+        if(num_iter_data != 0){
+            iter_app.size_average = data_sum / num_iter_data;
+        }
+    }
+
+}
+
+void McoFac::apps_average_interval(){
+
+    for(McoAppRegister& iter_app :  my_list){
+
+        int num_iter_data = 0;
+        int64_t data_sum = 0;
+
+        for(auto iter_data = iter_app.msg_data_list.begin() ; iter_data != iter_app.msg_data_list.end(); iter_data++){
+            
+            auto iter_data_next = iter_data;
+            iter_data_next++;
+
+            if(iter_data_next != iter_app.msg_data_list.end()){
+            
+                data_sum = data_sum + (iter_data_next->msgTime - iter_data->msgTime);
+                num_iter_data++;
+
+            }
+
+        }
+        if(num_iter_data != 0){
+            iter_app.interval_average  = data_sum / num_iter_data;
+        }
     }
 
 }
@@ -194,17 +226,15 @@ void McoFac::schedule_timer()
 }
 
 void McoFac::on_timer(Clock::time_point)
-{
+{   
     
     schedule_timer();
 
     clean_outdated();
 
+    apps_average_size();
     
-
-
-    
-
+    apps_average_interval();
 
 
     // clean

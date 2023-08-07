@@ -31,7 +31,8 @@ int main(int argc, const char** argv)
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
         ("cam-interval", po::value<unsigned>()->default_value(1000), "CAM sending interval in milliseconds.")
-        // cbr
+        /* cbr */ ("cbr,c", po::value<double>()->default_value(0.5), "CBR")
+        /* Ejecutar con o sin mco */ ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -60,12 +61,14 @@ int main(int argc, const char** argv)
         std::cerr << options << std::endl;
         return 1;
     }
-
+    
     if (vm.count("help")) {
         std::cout << options << std::endl;
         return 1;
     }
 
+    
+    
     try {
         asio::io_service io_service;
         TimeTrigger trigger(io_service);
@@ -130,10 +133,15 @@ int main(int argc, const char** argv)
         context.require_position_fix(vm.count("require-gnss-fix") > 0);
         context.set_link_layer(link_layer.get());
         
+        int use_mco = vm["use-mco"].as<int>();
+
+        std::unique_ptr<McoFac> mco;
         
-        std::unique_ptr<McoFac> mco  {
-            new McoFac(*positioning, trigger.runtime())
-        };
+        if(use_mco != 0){
+
+            mco = std::make_unique<McoFac>(*positioning, trigger.runtime());
+
+        }
 
         std::map<std::string, std::unique_ptr<Application>> apps;
         for (const std::string& app_name : vm["applications"].as<std::vector<std::string>>()) {
@@ -146,15 +154,21 @@ int main(int argc, const char** argv)
 
             if (app_name == "ca") {
 
-                /* std::unique_ptr<CamApplication> ca {
-                    new CamApplication(*positioning, trigger.runtime())
-                }; */
-
                 
+                std::unique_ptr<CamApplication> ca;
 
-                std::unique_ptr<CamApplication> ca {  
-                    new CamApplication(*mco, *positioning, trigger.runtime())
-                };
+                if(use_mco != 0){
+
+                    
+                    ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime(), use_mco);
+                    
+
+                } else{
+
+                    ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime());
+
+                }
+
                 
                 ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
                 ca->print_received_message(vm.count("print-rx-cam") > 0);
@@ -196,7 +210,10 @@ int main(int argc, const char** argv)
 
                 /////////////////////////////////////////////////////////////Hasta aqui Cas de prueba
 
-                apps.emplace("mco", std::move(mco));
+                if(use_mco != 0){
+                    apps.emplace("mco", std::move(mco)); 
+                }
+                
 
 
                 

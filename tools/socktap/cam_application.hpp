@@ -11,7 +11,8 @@
 class CamApplication : public Application
 {
 public:
-    /* CamApplication(vanetza::PositionProvider& positioning, vanetza::Runtime& rt); */
+
+    CamApplication(McoFac &mco, vanetza::PositionProvider& positioning, vanetza::Runtime& rt, int use_mco);
 
     CamApplication(McoFac &mco, vanetza::PositionProvider& positioning, vanetza::Runtime& rt); 
 
@@ -22,6 +23,7 @@ public:
     void print_generated_message(bool flag);
 
     std::string app_name;
+    int use_mco_;
 
 private:
     void schedule_timer();

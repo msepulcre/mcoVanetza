@@ -16,20 +16,24 @@ using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
 
-/* CamApplication::CamApplication(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), onemco_(McoFac(positioning, rt))
-{   
-    schedule_timer();
-    //Que hago con el onemco_?
-} */
 
+CamApplication::CamApplication(McoFac &mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
+   mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
+{
+    schedule_timer();
+
+    app_name = mco.register_app();
+
+}
 
 CamApplication::CamApplication(McoFac &mco, PositionProvider& positioning, Runtime& rt) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1))
 {
-    schedule_timer();
-    app_name = mco.register_app();
 
+    use_mco_ = 0;
+    
+    schedule_timer();
+    
 }
 
 void CamApplication::set_interval(Clock::duration interval)
@@ -142,7 +146,20 @@ void CamApplication::on_timer(Clock::time_point)
 
     std::cout << "Se va a transmitir un paquete de la aplicacion: " << app_name << std::endl;
 
-    auto confirm = mco_.mco_data_request(request, std::move(packet), app_name); 
+    DataConfirm confirm; 
+    
+    if(use_mco_  !=  0){
+
+        confirm = mco_.mco_data_request(request, std::move(packet), app_name); 
+
+    } 
+    else{
+
+        confirm = Application::request(request, std::move(packet));
+
+    }
+
+     
     if (!confirm.accepted()) {
         throw std::runtime_error("CAM application data request failed");
     }

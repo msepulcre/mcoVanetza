@@ -19,6 +19,10 @@ public:
 
     };
 
+    float size_average;
+
+    float interval_average;
+
     std::list<MsgData> msg_data_list;
     
     McoAppRegister();

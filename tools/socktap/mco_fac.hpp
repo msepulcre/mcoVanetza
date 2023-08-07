@@ -32,6 +32,10 @@ public:
     std::string rand_name();
     
     void clean_outdated();
+
+    void apps_average_size();
+    
+    void apps_average_interval();
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
