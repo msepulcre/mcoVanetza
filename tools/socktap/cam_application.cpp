@@ -17,16 +17,16 @@ using namespace vanetza::facilities;
 using namespace std::chrono;
 
 
-CamApplication::CamApplication(McoFac &mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
+CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
 {
     schedule_timer();
 
-    app_name = mco.register_app();
+    app_name = mco.register_app(cam_interval_);
 
 }
 
-CamApplication::CamApplication(McoFac &mco, PositionProvider& positioning, Runtime& rt) :
+CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1))
 {
 

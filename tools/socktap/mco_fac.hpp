@@ -25,7 +25,7 @@ public:
 
     bool search_in_list(std::string app_name);
 
-    std::string register_app();
+    std::string register_app(vanetza::Clock::duration& interval_);
 
     void register_packet(std::string app_name, float msgSize, int64_t msgTime);
 
@@ -36,6 +36,16 @@ public:
     void apps_average_size();
     
     void apps_average_interval();
+
+    void calc_adapt_delta();
+
+    void set_adapt_interval();
+
+    double adapt_delta;
+
+    double CBR_target;
+
+    double CBR;
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;

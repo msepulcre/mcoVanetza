@@ -4,19 +4,21 @@
 #include <string.h>
 
 
-McoAppRegister::McoAppRegister(){
+McoAppRegister::McoAppRegister(vanetza::Clock::duration& interval):
+interval_(interval)
+{
 
     app_name = "";
-    msg_data_list.push_back( { 0 , 0 });
     size_average = 0;
     interval_average = 0;
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena){
+McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval):
+interval_(interval)
+{
     
     app_name.assign(cadena);
-    msg_data_list.push_back({ 0 , 0});
     size_average = 0;
     interval_average = 0;
 
@@ -24,7 +26,9 @@ McoAppRegister::McoAppRegister(std::string cadena){
 }
 
 
-McoAppRegister::McoAppRegister(McoAppRegister *appCopied){
+McoAppRegister::McoAppRegister(McoAppRegister *appCopied):
+interval_(appCopied->interval_)
+{
 
     app_name.assign(appCopied->app_name);
     
@@ -39,7 +43,9 @@ McoAppRegister::McoAppRegister(McoAppRegister *appCopied){
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time){
+McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval):
+interval_(interval)
+{
 
     app_name.assign(cadena);
     msg_data_list.push_back({size , time});

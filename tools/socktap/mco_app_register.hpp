@@ -1,6 +1,7 @@
 #ifndef MCO_APP_REGISTER_HPP_PSIGPUTG
 #define MCO_APP_REGISTER_PSIGPUTG
 
+#include <vanetza/common/clock.hpp>
 #include <iostream>
 #include <string.h>
 #include <cstring>
@@ -23,12 +24,14 @@ public:
 
     float interval_average;
 
+    vanetza::Clock::duration& interval_;
+
     std::list<MsgData> msg_data_list;
     
-    McoAppRegister();
-    McoAppRegister(std::string cadena);
+    McoAppRegister(vanetza::Clock::duration& interval);
+    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval);
     McoAppRegister(McoAppRegister *appCopied);
-    McoAppRegister(std::string cadena, float size, int64_t interval);
+    McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval);
 
 };
 
