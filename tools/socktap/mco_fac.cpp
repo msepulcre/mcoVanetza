@@ -181,7 +181,6 @@ void McoFac::apps_average_interval(){
         }
         if(num_iter_data != 0){
             iter_app.interval_average  = data_sum / num_iter_data;
-            std::cout << "La media de intervalos es: " << iter_app.interval_average << std::endl;
         }
     }
 
@@ -195,11 +194,8 @@ void McoFac::calc_adapt_delta(){
 
     double delta_offset = beta *  (CBR_target - CBR);
 
-    std::cout << "delta_offset: " << delta_offset << std::endl;
-
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
-    std::cout << "adapt_delta: " << adapt_delta << std::endl;
-
+    
 }
 
 void McoFac::set_adapt_interval(){
@@ -211,7 +207,7 @@ void McoFac::set_adapt_interval(){
 
     if(my_list.size() != 0){
 
-        float relative_adapt_delta = adapt_delta/my_list.size();
+        float relative_adapt_delta = adapt_delta/my_list.size(); //divido delta por el numero de aplicaciones en marcha
 
         for(McoAppRegister& iter_app : my_list){
             
@@ -220,10 +216,9 @@ void McoFac::set_adapt_interval(){
                 double Ton = (iter_app.size_average / data_speed)*0.008; //aqui asumo que packet->size() da bytes y lo paso a Mbits
                 
                 unsigned Toff = Ton/relative_adapt_delta;
-                std::cout << "delta: " << relative_adapt_delta << std::endl;
 
-                iter_app.interval_ = std::chrono::milliseconds(Toff);
-                std::cout << "Se modifico el intervalo a: " << Toff << std::endl;
+                /* iter_app.interval_ = std::chrono::milliseconds(Toff); */
+                /* std::cout << "Se modifico el intervalo a: " << Toff << std::endl; */
             }
         }
     }

@@ -31,9 +31,10 @@ int main(int argc, const char** argv)
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
         ("cam-interval", po::value<unsigned>()->default_value(1000), "CAM sending interval in milliseconds.")
-        /* cbr */ ("cbr,c", po::value<double>()->default_value(0.5), "CBR")
+        ("cbr,c", po::value<double>()->default_value(0.5), "CBR")
         ("cbr_target,c", po::value<double>()->default_value(0.68), "CBR target")
-        /* Ejecutar con o sin mco */ ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
+        ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
+        ("num_ca, n", po::value<int>()->default_value(5), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -162,61 +163,34 @@ int main(int argc, const char** argv)
 
             if (app_name == "ca") {
 
+                int num_ca = vm["num_ca"].as<int>();
+
+                int i;
+
+                for(i = 0; i < num_ca ; i++){
+
+                    std::unique_ptr<CamApplication> ca;
+
+                    if(use_mco != 0){
+
+                    
+                        ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime(), use_mco);
+                    
+
+                    } else{
+
+                        ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime());
+
+                    }  
+                    std::string str_num = std::to_string(i);
+                    std::string iter_name = "ca" + str_num;
                 
-                std::unique_ptr<CamApplication> ca;
-
-                if(use_mco != 0){
-
+                    ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
+                    ca->print_received_message(vm.count("print-rx-cam") > 0);
+                    ca->print_generated_message(vm.count("print-tx-cam") > 0);
+                    apps.emplace(iter_name, std::move(ca));
                     
-                    ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime(), use_mco);
-                    
-
-                } else{
-
-                    ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime());
-
                 }
-
-                
-                ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
-                ca->print_received_message(vm.count("print-rx-cam") > 0);
-                ca->print_generated_message(vm.count("print-tx-cam") > 0);
-                apps.emplace(app_name, std::move(ca));
-                
-
-                /////////////////////////////////////////////////////////////A partir de aqui CAs de prueba
-
-                /* std::unique_ptr<CamApplication> ca2 {  
-                    new CamApplication(*onemco, *positioning, trigger.runtime())
-                };
-                
-                ca2->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
-                ca2->print_received_message(vm.count("print-rx-cam") > 0);
-                ca2->print_generated_message(vm.count("print-tx-cam") > 0);
-                apps.emplace("ca2", std::move(ca2));
-                
-
-
-                std::unique_ptr<CamApplication> ca3 {  
-                    new CamApplication(*onemco, *positioning, trigger.runtime())
-                };
-                
-                ca3->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
-                ca3->print_received_message(vm.count("print-rx-cam") > 0);
-                ca3->print_generated_message(vm.count("print-tx-cam") > 0);
-                apps.emplace("c3", std::move(ca3));
-
-
-                std::unique_ptr<CamApplication> ca4 {  
-                    new CamApplication(*onemco, *positioning, trigger.runtime())
-                };
-                
-                ca4->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));
-                ca4->print_received_message(vm.count("print-rx-cam") > 0);
-                ca4->print_generated_message(vm.count("print-tx-cam") > 0);
-                apps.emplace("c4", std::move(ca4)); */
-
-                /////////////////////////////////////////////////////////////Hasta aqui Cas de prueba
 
                 if(use_mco != 0){
                     apps.emplace("mco", std::move(mco)); 
