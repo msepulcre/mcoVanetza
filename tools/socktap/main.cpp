@@ -34,7 +34,7 @@ int main(int argc, const char** argv)
         ("cbr,c", po::value<double>()->default_value(0.5), "CBR")
         ("cbr_target,c", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
-        ("num_ca, n", po::value<int>()->default_value(5), "number of application CA")
+        ("num_ca, n", po::value<int>()->default_value(3), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -143,13 +143,14 @@ int main(int argc, const char** argv)
 
             mco = std::make_unique<McoFac>(*positioning, trigger.runtime());
 
+            float CBR = vm["cbr"].as<double>();
+            float CBR_target = vm["cbr_target"].as<double>();
+
+            mco->CBR = CBR;
+            mco->CBR_target = CBR_target;
         }
 
-        float CBR = vm["cbr"].as<double>();
-        float CBR_target = vm["cbr_target"].as<double>();
-
-        mco->CBR = CBR;
-        mco->CBR_target = CBR_target;
+        
 
 
         std::map<std::string, std::unique_ptr<Application>> apps;
