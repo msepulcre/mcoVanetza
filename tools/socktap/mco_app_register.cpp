@@ -14,10 +14,10 @@ interval_(interval)
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval):
-interval_(interval)
+McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class):
+interval_(interval), traffic_class_(traffic_class)
 {
-    
+    std::cout << "El traffic class de " << cadena << " es " << traffic_class_ << std::endl;
     app_name.assign(cadena);
     size_average = 0;
     interval_average = 0;

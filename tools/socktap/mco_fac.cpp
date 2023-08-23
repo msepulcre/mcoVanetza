@@ -28,6 +28,9 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
 
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
+    //Por aqui podria poner un if no se esta enviando ningun paquete, tal vez podria funcionar añadiendo al registro una "maquina de estados"
+    //la cual se pone a 1 cuando la aplicacion esta enviando un paquete y a 0 cuando no
+    //Tambien habria que tener en cuenta que si el paquete no se envia en el momento, luego podria ya no servir, dado que es en tiempo real
     confirm = Application::request(request, std::move(packet));
     return confirm;
 }
@@ -56,7 +59,7 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
 }
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100))
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
 {
     schedule_timer();
 }
@@ -64,7 +67,7 @@ McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
 std::string McoFac::rand_name(){
 
     char strrnd[10];
-    srand(time(NULL) + my_list.size());
+    srand(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     for(int i=0; i <= 9; i++){
         strrnd[i] = 33 + rand() % (126 - 33);
     }
@@ -95,8 +98,9 @@ std::string McoFac::register_app(vanetza::Clock::duration& interval_){
         name_used = search_in_list(app_name);
 
         if(!name_used){
-
-            my_list.push_back(McoAppRegister(app_name, interval_));
+            
+            
+            my_list.push_back(McoAppRegister(app_name, interval_, rand_traffic_class()));
             std::cout << "Se ha registrado la aplicacion con el nombre: " << app_name << std::endl;
 
         } else{
@@ -193,8 +197,10 @@ void McoFac::calc_adapt_delta(){
     const double beta = 0.0012;
 
     double delta_offset = beta *  (CBR_target - CBR);
-
+    std::cout << "delta_offset: " << delta_offset << std::endl;
+    std::cout << "adapt_delta antes: " << adapt_delta << std::endl;
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
+    std::cout << "adapt_delta despues: " << adapt_delta << std::endl;
     
 }
 
@@ -208,21 +214,44 @@ void McoFac::set_adapt_interval(){
     if(my_list.size() != 0){
 
         float relative_adapt_delta = adapt_delta/my_list.size(); //divido delta por el numero de aplicaciones en marcha
+        std::cout << "my_list.size(): " << my_list.size() << std::endl;
 
         for(McoAppRegister& iter_app : my_list){
             
             if(iter_app.size_average != 0){
 
                 double Ton = (iter_app.size_average / data_speed)*0.008; //aqui asumo que packet->size() da bytes y lo paso a Mbits
-                
+                std::cout << "Ton: " << Ton << std::endl;
                 unsigned Toff = Ton/relative_adapt_delta;
 
                 /* iter_app.interval_ = std::chrono::milliseconds(Toff); */
-                /* std::cout << "Se modifico el intervalo a: " << Toff << std::endl; */
+                std::cout << "Se modifico el intervalo a: " << Toff << std::endl;   
             }
         }
     }
     
+
+}
+
+void McoFac::simulate_CBR(){
+
+    if((CBR_target - CBR) > 0){
+
+        CBR += 0.01;
+
+    } else if(CBR_target - CBR < 0){
+
+        CBR -= 0.01;
+
+    }
+
+}
+
+int McoFac::rand_traffic_class(){
+
+    srand(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+
+    return rand() % 4; 
 
 }
 
@@ -279,6 +308,8 @@ void McoFac::on_timer(Clock::time_point)
     calc_adapt_delta();
 
     set_adapt_interval();
+
+    simulate_CBR();
 
 
     // clean

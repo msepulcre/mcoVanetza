@@ -26,10 +26,12 @@ public:
 
     vanetza::Clock::duration& interval_;
 
+    int traffic_class_;
+
     std::list<MsgData> msg_data_list;
     
     McoAppRegister(vanetza::Clock::duration& interval);
-    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval);
+    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class);
     McoAppRegister(McoAppRegister *appCopied);
     McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval);
 

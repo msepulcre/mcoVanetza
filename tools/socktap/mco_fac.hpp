@@ -41,6 +41,10 @@ public:
 
     void set_adapt_interval();
 
+    void simulate_CBR();
+
+    int rand_traffic_class();
+
     double adapt_delta;
 
     double CBR_target;
