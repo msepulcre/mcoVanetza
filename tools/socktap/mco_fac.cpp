@@ -26,6 +26,9 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
+    bytes_sent += packet->size();
+    std::cout << "bytes_sent actuales: " << bytes_sent << std::endl;
+
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
     //Por aqui podria poner un if no se esta enviando ningun paquete, tal vez podria funcionar añadiendo al registro una "maquina de estados"
@@ -59,7 +62,7 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
 }
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1), bytes_sent(0)
 {
     schedule_timer();
 }
@@ -197,16 +200,13 @@ void McoFac::calc_adapt_delta(){
     const double beta = 0.0012;
 
     double delta_offset = beta *  (CBR_target - CBR);
-    std::cout << "delta_offset: " << delta_offset << std::endl;
-    std::cout << "adapt_delta antes: " << adapt_delta << std::endl;
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
-    std::cout << "adapt_delta despues: " << adapt_delta << std::endl;
     
 }
 
 void McoFac::set_adapt_interval(){
 
-    const double     data_speed = 0.006; // Mbits/mseg
+    const double data_speed = 0.006; // Mbits/mseg
 
     //esto igual convendria ponerlo tambien en el registro y que lo dé el constructor de
     //cada app, para que cada una tenga su velocidad
@@ -214,18 +214,16 @@ void McoFac::set_adapt_interval(){
     if(my_list.size() != 0){
 
         float relative_adapt_delta = adapt_delta/my_list.size(); //divido delta por el numero de aplicaciones en marcha
-        std::cout << "my_list.size(): " << my_list.size() << std::endl;
 
         for(McoAppRegister& iter_app : my_list){
             
             if(iter_app.size_average != 0){
 
                 double Ton = (iter_app.size_average / data_speed)*0.008; //aqui asumo que packet->size() da bytes y lo paso a Mbits
-                std::cout << "Ton: " << Ton << std::endl;
                 unsigned Toff = Ton/relative_adapt_delta;
 
-                /* iter_app.interval_ = std::chrono::milliseconds(Toff); */
-                std::cout << "Se modifico el intervalo a: " << Toff << std::endl;   
+                std::cout << "Se modifico el intervalo a: " << Toff << std::endl; 
+                iter_app.interval_ = std::chrono::milliseconds(Toff);  
             }
         }
     }
@@ -235,15 +233,17 @@ void McoFac::set_adapt_interval(){
 
 void McoFac::simulate_CBR(){
 
-    if((CBR_target - CBR) > 0){
+    double total_time = mco_interval_.count()*1000; //milliseconds
 
-        CBR += 0.01;
+    const double data_speed = 0.75; // bytes/mseg
 
-    } else if(CBR_target - CBR < 0){
+    double time_sending = bytes_sent / data_speed;
+    std::cout << "Tiempo enviando: " << time_sending << std::endl;
 
-        CBR -= 0.01;
+    CBR = time_sending / total_time;
+    std::cout << "Se modifico el CBR a: " << CBR << std::endl;
 
-    }
+    bytes_sent = 0;
 
 }
 

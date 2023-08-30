@@ -50,6 +50,8 @@ public:
     double CBR_target;
 
     double CBR;
+
+    double bytes_sent;
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
