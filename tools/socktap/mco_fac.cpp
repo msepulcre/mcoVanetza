@@ -21,19 +21,21 @@ using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
 
+McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
+{
+    schedule_timer();
+}
+
 McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, std::string app_name) //YERAY
 {
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
-    bytes_sent += packet->size();
-    std::cout << "bytes_sent actuales: " << bytes_sent << std::endl;
-
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
-    //Por aqui podria poner un if no se esta enviando ningun paquete, tal vez podria funcionar añadiendo al registro una "maquina de estados"
-    //la cual se pone a 1 cuando la aplicacion esta enviando un paquete y a 0 cuando no
-    //Tambien habria que tener en cuenta que si el paquete no se envia en el momento, luego podria ya no servir, dado que es en tiempo real
+    waiting_queue(app_name);
+
     confirm = Application::request(request, std::move(packet));
     return confirm;
 }
@@ -59,12 +61,6 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
     << app_registered->msg_data_list.size() << std::endl;
     
 
-}
-
-McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1), bytes_sent(0)
-{
-    schedule_timer();
 }
 
 std::string McoFac::rand_name(){
@@ -231,28 +227,91 @@ void McoFac::set_adapt_interval(){
 
 }
 
-void McoFac::simulate_CBR(){
-
-    double total_time = mco_interval_.count()*1000; //milliseconds
-
-    const double data_speed = 0.75; // bytes/mseg
-
-    double time_sending = bytes_sent / data_speed;
-    std::cout << "Tiempo enviando: " << time_sending << std::endl;
-
-    CBR = time_sending / total_time;
-    std::cout << "Se modifico el CBR a: " << CBR << std::endl;
-
-    bytes_sent = 0;
-
-}
-
 int McoFac::rand_traffic_class(){
 
     srand(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 
     return rand() % 4; 
 
+}
+
+void McoFac::waiting_queue(std::string app_name){
+
+    int traffic_class = search_traffic_class(app_name);
+
+    std::string packet_name = rand_name();
+
+    packet_queue[traffic_class].push_back({app_name, packet_name});
+
+    bool first_in_queue = 0;
+
+    while(first_in_queue == 0){
+
+        auto iter = packet_queue[traffic_class].begin();
+        
+        if((iter->app_name == app_name) && (iter->packet_name == packet_name)){
+
+            first_in_queue = 1;
+          
+        }
+
+        
+    }
+    
+    bool no_others_queue = 0;
+
+    if(traffic_class != 0){
+
+        while(no_others_queue == 0){
+
+            no_others_queue = 1;
+
+            for(int i = traffic_class -1; i >= 0; i--){
+
+                if(!packet_queue[i].empty()){
+
+                    no_others_queue = 0;
+
+                }
+
+            }
+
+        }
+    }
+    //El paquete ya no tiene que esperar y se borra de la cola
+
+    bool deleted_item = 0;
+
+    for(auto iter = packet_queue[traffic_class].begin(); iter != packet_queue[traffic_class].end();){
+
+        if((iter->app_name == app_name) && (iter->packet_name == packet_name)){
+
+            iter = packet_queue[traffic_class].erase(iter);
+            break;
+          
+        } else{
+            
+            iter++;
+
+        }
+
+
+    }
+}
+
+int McoFac::search_traffic_class(std::string app_name){
+
+    for(auto iter : my_list){
+
+        if(app_name ==  iter.app_name){
+
+            return iter.traffic_class_;
+        }
+
+
+    }
+
+    return 3;
 }
 
 void McoFac::set_interval(Clock::duration interval)
@@ -308,8 +367,6 @@ void McoFac::on_timer(Clock::time_point)
     calc_adapt_delta();
 
     set_adapt_interval();
-
-    simulate_CBR();
 
 
     // clean

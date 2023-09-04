@@ -22,4 +22,4 @@ USER build-user
 WORKDIR /home/build-user
 ARG ID
 USER $ID
-ENTRYPOINT sudo socktap -a ca -a static -i eth0  --print-tx-cam --print-rx-cam
+ENTRYPOINT sudo socktap -a ca -p static -i eth0  --print-tx-cam --print-rx-cam

@@ -41,9 +41,11 @@ public:
 
     void set_adapt_interval();
 
-    void simulate_CBR();
-
     int rand_traffic_class();
+
+    void waiting_queue(std::string app_name);
+
+    int search_traffic_class(std::string app_name);
 
     double adapt_delta;
 
@@ -51,7 +53,15 @@ public:
 
     double CBR;
 
-    double bytes_sent;
+    struct data_queue{
+
+        std::string app_name;
+
+        std::string packet_name;
+
+    };
+
+    
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
@@ -62,6 +72,7 @@ public:
 
     std::list<McoAppRegister> my_list;
 
+    std::list<data_queue> packet_queue[4];
 
 /* protected:
     

@@ -12,8 +12,13 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
+/* #include <log4cxx/logger.h>
+#include <log4cxx/xml/domconfigurator.h> */
 
 
+/* using namespace log4cxx;
+using namespace log4cxx::xml;
+using namespace log4cxx::helpers; */
 
 namespace asio = boost::asio;
 namespace gn = vanetza::geonet;
@@ -22,6 +27,8 @@ using namespace vanetza;
 
 int main(int argc, const char** argv)
 {
+    /* DOMConfigurator::configure("/usr/local/src/Log4cxxConfig.xml"); */
+    
     po::options_description options("Allowed options");
     options.add_options()
         ("help", "Print out available options.")
