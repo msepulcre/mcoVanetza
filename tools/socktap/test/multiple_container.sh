@@ -20,8 +20,18 @@ else
 
     for((i = 1; i <= $1; i++)); do
     
-        sudo docker run -d -v /usr/local/src/socktap$1:/usr/local/src/socktap --name socktap$i --network bridge socktap-docker
+        sudo docker run -d -v /usr/local/src/socktap$i:/usr/local/src/socktap --name socktap$i --network bridge socktap-docker
+
 
     done
+
+    if [ "$3" == "t" ]; then
+
+        for((i = 1; i <= $1; i++)); do
+    
+            gnome-terminal --tab --title="Termianl de Socktap$i" -- bash -c "sudo docker logs -f socktap$i; exec bash"
+
+        done
+    fi
 
 fi
