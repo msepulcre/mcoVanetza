@@ -18,6 +18,7 @@ class RouterContext
 {
 public:
     RouterContext(const vanetza::geonet::MIB&, TimeTrigger&, vanetza::PositionProvider&, vanetza::security::SecurityEntity*);
+    RouterContext(const vanetza::geonet::MIB&, TimeTrigger&, vanetza::PositionProvider&, vanetza::security::SecurityEntity*, int use_mco);
     ~RouterContext();
     void enable(Application*);
     void disable(Application*);

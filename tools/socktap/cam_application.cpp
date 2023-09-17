@@ -20,9 +20,11 @@ using namespace std::chrono;
 CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
 {
-    schedule_timer();
+    app_number = mco_.my_list.size();
 
-    app_name = mco.register_app(cam_interval_);
+    app_name = mco.register_app(cam_interval_, *this);
+
+    schedule_timer();
 
 }
 
@@ -55,11 +57,47 @@ void CamApplication::print_received_message(bool flag)
 
 CamApplication::PortType CamApplication::port()
 {
-    return btp::ports::CAM;
+    if(use_mco_ != 0 ){
+
+        switch(app_number){
+
+            case 0:
+
+            return btp::ports::CAM;
+
+                break;
+
+            case 1:
+
+            return btp::ports::CAM1;
+
+                break;
+
+            case 2:
+
+            return btp::ports::CAM2;
+
+                break;
+
+            case 3:
+
+            return btp::ports::CAM3;
+
+                break;
+
+            default:
+
+            return btp::ports::CAM4;
+        }
+
+    } else{
+
+        return btp::ports::CAM;
+    }
 }
 
 void CamApplication::indicate(const DataIndication& indication, UpPacketPtr packet)
-{
+{   
     asn1::PacketVisitor<asn1::Cam> visitor;
     std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
 
@@ -144,13 +182,11 @@ void CamApplication::on_timer(Clock::time_point)
 
     /* auto confirm = Application::request(request, std::move(packet)); */
 
-    std::cout << "Se va a transmitir un paquete de la aplicacion: " << app_name << std::endl;
-
     DataConfirm confirm; 
     
     if(use_mco_  !=  0){
 
-        confirm = mco_.mco_data_request(request, std::move(packet), app_name); 
+        confirm = mco_.mco_data_request(request, std::move(packet), app_name, port()); 
 
     } 
     else{

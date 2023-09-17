@@ -1,6 +1,7 @@
 #ifndef MCO_APP_REGISTER_HPP_PSIGPUTG
 #define MCO_APP_REGISTER_PSIGPUTG
 
+#include "application.hpp"
 #include <vanetza/common/clock.hpp>
 #include <iostream>
 #include <string.h>
@@ -15,7 +16,7 @@ public:
     
     struct MsgData{
 
-        float msgSize;
+        float msgSize; //bytes
         int64_t msgTime;  
 
     };
@@ -28,12 +29,16 @@ public:
 
     int traffic_class_;
 
+    const unsigned min_interval; //microsegundos
+
     std::list<MsgData> msg_data_list;
+
+    Application& application_;
     
-    McoAppRegister(vanetza::Clock::duration& interval);
-    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class);
+    McoAppRegister(vanetza::Clock::duration& interval, Application& application);
+    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class, Application& application);
     McoAppRegister(McoAppRegister *appCopied);
-    McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval);
+    McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval, Application& application);
 
 };
 

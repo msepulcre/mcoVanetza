@@ -25,7 +25,7 @@ public:
 
     bool search_in_list(std::string app_name);
 
-    std::string register_app(vanetza::Clock::duration& interval_);
+    std::string register_app(vanetza::Clock::duration& interval_, Application& application);
 
     void register_packet(std::string app_name, float msgSize, int64_t msgTime);
 
@@ -43,9 +43,13 @@ public:
 
     int rand_traffic_class();
 
-    void waiting_queue(std::string app_name);
-
     int search_traffic_class(std::string app_name);
+
+    Application* search_port(vanetza::btp::port_type PORT);
+
+    void byte_counter_update(unsigned packet_size);
+
+    void CBR_update();
 
     double adapt_delta;
 
@@ -53,26 +57,16 @@ public:
 
     double CBR;
 
-    struct data_queue{
-
-        std::string app_name;
-
-        std::string packet_name;
-
-    };
-
-    
+    unsigned byte_counter;
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
     void set_interval(vanetza::Clock::duration);
     void print_received_message(bool flag);
     void print_generated_message(bool flag);
-    DataConfirm mco_data_request(const DataRequest&, DownPacketPtr, std::string app_name); 
+    DataConfirm mco_data_request(const DataRequest&, DownPacketPtr, std::string app_name, PortType PORT); 
 
     std::list<McoAppRegister> my_list;
-
-    std::list<data_queue> packet_queue[4];
 
 /* protected:
     

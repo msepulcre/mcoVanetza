@@ -32,6 +32,33 @@ Application::DataConfirm Application::request(const DataRequest& request, DownPa
     return confirm;
 }
 
+Application::DataConfirm Application::request(const DataRequest& request, DownPacketPtr packet, PortType PORT)
+{
+    DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
+    
+    if (router_ && packet) {
+        btp::HeaderB btp_header;
+        btp_header.destination_port = PORT;
+        btp_header.destination_port_info = host_cast<uint16_t>(0);
+        packet->layer(OsiLayer::Transport) = btp_header;
+
+        switch (request.transport_type) {
+            case geonet::TransportType::SHB:
+                confirm = router_->request(request_shb(request), std::move(packet));
+                break;
+            case geonet::TransportType::GBC:
+                confirm = router_->request(request_gbc(request), std::move(packet));
+                break;
+            default:
+                // TODO remaining transport types are not implemented
+                break;
+        }
+
+    }
+    
+    return confirm;
+}
+
 void initialize_request(const Application::DataRequest& generic, geonet::DataRequest& geonet)
 {
     geonet.upper_protocol = geonet::UpperProtocol::BTP_B;

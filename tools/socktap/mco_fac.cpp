@@ -27,16 +27,16 @@ McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
     schedule_timer();
 }
 
-McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, std::string app_name) //YERAY
+McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, std::string app_name, PortType PORT) //YERAY
 {
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
+    byte_counter  += packet->size();
+
     register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
-    waiting_queue(app_name);
-
-    confirm = Application::request(request, std::move(packet));
+    confirm = Application::request(request, std::move(packet), PORT);
     return confirm;
 }
 
@@ -87,7 +87,7 @@ bool McoFac::search_in_list(std::string app_name){
 
 }
 
-std::string McoFac::register_app(vanetza::Clock::duration& interval_){ 
+std::string McoFac::register_app(vanetza::Clock::duration& interval_,  Application& application){ 
 
     bool name_used;
     std::string app_name;
@@ -99,7 +99,7 @@ std::string McoFac::register_app(vanetza::Clock::duration& interval_){
         if(!name_used){
             
             
-            my_list.push_back(McoAppRegister(app_name, interval_, rand_traffic_class()));
+            my_list.push_back(McoAppRegister(app_name, interval_, rand_traffic_class(), application));
             std::cout << "Se ha registrado la aplicacion con el nombre: " << app_name << std::endl;
 
         } else{
@@ -197,34 +197,77 @@ void McoFac::calc_adapt_delta(){
 
     double delta_offset = beta *  (CBR_target - CBR);
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
+    std::cout << "adapt_delta: " << adapt_delta << std::endl;
     
 }
 
 void McoFac::set_adapt_interval(){
 
-    const double data_speed = 0.006; // Mbits/mseg
-
-    //esto igual convendria ponerlo tambien en el registro y que lo dé el constructor de
-    //cada app, para que cada una tenga su velocidad
+    const double data_speed = 0.75 * 1000000; // byte/s
 
     if(my_list.size() != 0){
 
-        float relative_adapt_delta = adapt_delta/my_list.size(); //divido delta por el numero de aplicaciones en marcha
+        int apps_number[4] = {0 , 0, 0, 0}; //numero de aplicaciones de cada traffic class
 
         for(McoAppRegister& iter_app : my_list){
-            
-            if(iter_app.size_average != 0){
 
-                double Ton = (iter_app.size_average / data_speed)*0.008; //aqui asumo que packet->size() da bytes y lo paso a Mbits
-                unsigned Toff = Ton/relative_adapt_delta;
-
-                std::cout << "Se modifico el intervalo a: " << Toff << std::endl; 
-                iter_app.interval_ = std::chrono::milliseconds(Toff);  
-            }
+            apps_number[iter_app.traffic_class_]++;
         }
+
+        for(int i = 0; (i < 4) && (adapt_delta != 0) ; i++){
+
+            float fraction_time = 0;
+            
+            for(auto iter_app : my_list){
+
+                if(iter_app.traffic_class_ = i){
+
+                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval * 1000000)); // s / s
+                    // fraccion de tiempo que la clase i pide
+                }
+
+            }
+
+            if(fraction_time <= adapt_delta){ //si la fraccion de tiempo que se pide es menor que la que se ofrece:
+
+                for(McoAppRegister& iter_app : my_list){
+
+                    if(iter_app.traffic_class_ = i){
+                        
+                        std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << iter_app.min_interval << std::endl;
+                        iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
+
+                        adapt_delta -= fraction_time;
+
+                    }
+
+                }
+
+            } else{ //si es mayor
+
+                adapt_delta /= apps_number[i];
+
+                for(McoAppRegister& iter_app : my_list){
+
+                    if((iter_app.traffic_class_ = i) && (iter_app.size_average > 0)){
+
+                        unsigned Ton = iter_app.size_average / data_speed;
+                        unsigned Toff = Ton / adapt_delta;
+                        
+                        std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << Ton + Toff << std::endl;
+                        iter_app.interval_ = std::chrono::seconds(Ton + Toff);
+
+                    }
+
+                }
+                adapt_delta = 0;
+                
+            }
+
+        }
+
     }
     
-
 }
 
 int McoFac::rand_traffic_class(){
@@ -233,70 +276,6 @@ int McoFac::rand_traffic_class(){
 
     return rand() % 4; 
 
-}
-
-void McoFac::waiting_queue(std::string app_name){
-
-    int traffic_class = search_traffic_class(app_name);
-
-    std::string packet_name = rand_name();
-
-    packet_queue[traffic_class].push_back({app_name, packet_name});
-
-    bool first_in_queue = 0;
-
-    while(first_in_queue == 0){
-
-        auto iter = packet_queue[traffic_class].begin();
-        
-        if((iter->app_name == app_name) && (iter->packet_name == packet_name)){
-
-            first_in_queue = 1;
-          
-        }
-
-        
-    }
-    
-    bool no_others_queue = 0;
-
-    if(traffic_class != 0){
-
-        while(no_others_queue == 0){
-
-            no_others_queue = 1;
-
-            for(int i = traffic_class -1; i >= 0; i--){
-
-                if(!packet_queue[i].empty()){
-
-                    no_others_queue = 0;
-
-                }
-
-            }
-
-        }
-    }
-    //El paquete ya no tiene que esperar y se borra de la cola
-
-    bool deleted_item = 0;
-
-    for(auto iter = packet_queue[traffic_class].begin(); iter != packet_queue[traffic_class].end();){
-
-        if((iter->app_name == app_name) && (iter->packet_name == packet_name)){
-
-            iter = packet_queue[traffic_class].erase(iter);
-            break;
-          
-        } else{
-            
-            iter++;
-
-        }
-
-
-    }
 }
 
 int McoFac::search_traffic_class(std::string app_name){
@@ -314,12 +293,60 @@ int McoFac::search_traffic_class(std::string app_name){
     return 3;
 }
 
+Application* McoFac::search_port(vanetza::btp::port_type PORT){
+
+    Application* aplication = nullptr;
+
+    for(McoAppRegister& iter : my_list){
+
+        if(iter.application_.port() == PORT){
+
+            aplication = &iter.application_;
+
+            break;
+
+        }
+
+    }
+
+    return aplication;
+}
+
+void McoFac::CBR_update(){
+
+    const double data_speed = 0.75 * 1000000000000; // bytes/microseconds
+
+    double time_ocuped = byte_counter / data_speed;
+
+    CBR = time_ocuped / mco_interval_.count();
+
+    byte_counter = 0;
+
+}
+
+void McoFac::byte_counter_update(unsigned packet_size){
+
+    const unsigned network_header = 0;
+
+    const unsigned data_link_header = 0;
+
+    const unsigned transport_header = 0;
+
+    const unsigned header_size = network_header + data_link_header + transport_header;
+
+    packet_size += header_size;
+
+    byte_counter += packet_size;
+
+}
+
 void McoFac::set_interval(Clock::duration interval)
 {
     mco_interval_ = interval;
     runtime_.cancel(this);
     schedule_timer();
 }
+
 
 void McoFac::print_generated_message(bool flag)
 {
@@ -333,19 +360,23 @@ void McoFac::print_received_message(bool flag)
 
 McoFac::PortType McoFac::port()
 {
-    return btp::ports::CAM;
+    return btp::ports::MCO;
 }
 
 void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
-{
+{   
+    std::cout << "MCO received a packet" << std::endl;
+    Application* application = search_port(indication.destination_port);
+    
     asn1::PacketVisitor<asn1::Cam> visitor;
     std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
 
-    std::cout << "CAM application received a packet with " << (cam ? "decodable" : "broken") << " content" << std::endl;
-    if (cam && print_rx_msg_) {
-        std::cout << "Received CAM contains\n";
-        print_indented(std::cout, *cam, "  ", 1);
-    }
+    byte_counter_update(cam->size());
+
+    application->indicate(indication, std::move(packet));
+
+    /* std::cout << "MCO " << (cam ? "decodable" : "broken") << " content" << std::endl; */
+    
 }
 
 void McoFac::schedule_timer()
@@ -366,7 +397,10 @@ void McoFac::on_timer(Clock::time_point)
 
     calc_adapt_delta();
 
-    set_adapt_interval();
+    CBR_update();
+
+    /* set_adapt_interval(); */
+
 
 
     // clean

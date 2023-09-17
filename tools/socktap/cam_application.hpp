@@ -24,6 +24,7 @@ public:
 
     std::string app_name;
     int use_mco_;
+    int app_number;
 
 private:
     void schedule_timer();

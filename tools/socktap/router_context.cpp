@@ -24,6 +24,21 @@ RouterContext::RouterContext(const geonet::MIB& mib, TimeTrigger& trigger, vanet
     trigger_.schedule();
 }
 
+RouterContext::RouterContext(const geonet::MIB& mib, TimeTrigger& trigger, vanetza::PositionProvider& positioning, vanetza::security::SecurityEntity* security_entity, int use_mco) :
+    mib_(mib), router_(trigger.runtime(), mib_),
+    trigger_(trigger), positioning_(positioning)
+{   
+    dispatcher_.use_mco_ = use_mco;
+    
+    router_.packet_dropped = std::bind(&RouterContext::log_packet_drop, this, std::placeholders::_1);
+    router_.set_address(mib_.itsGnLocalGnAddr);
+    router_.set_transport_handler(geonet::UpperProtocol::BTP_B, &dispatcher_);
+    router_.set_security_entity(security_entity);
+    update_position_vector();
+
+    trigger_.schedule();
+}
+
 RouterContext::~RouterContext()
 {
     for (auto* app : applications_) {

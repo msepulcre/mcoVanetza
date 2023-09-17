@@ -41,7 +41,7 @@ int main(int argc, const char** argv)
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,c", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
-        ("num_ca, n", po::value<int>()->default_value(1), "number of application CA")
+        ("num_ca, n", po::value<int>()->default_value(3), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -138,11 +138,16 @@ int main(int argc, const char** argv)
             mib.itsGnSecurity = true;
         }
 
-        RouterContext context(mib, trigger, *positioning, security.get());
+        int use_mco = vm["use-mco"].as<int>();
+
+        RouterContext context(mib, trigger, *positioning, security.get(), use_mco);
+
+        /* RouterContext context(mib, trigger, *positioning, security.get()); */
+
         context.require_position_fix(vm.count("require-gnss-fix") > 0);
         context.set_link_layer(link_layer.get());
         
-        int use_mco = vm["use-mco"].as<int>();
+        
 
         std::unique_ptr<McoFac> mco;
         

@@ -4,8 +4,8 @@
 #include <string.h>
 
 
-McoAppRegister::McoAppRegister(vanetza::Clock::duration& interval):
-interval_(interval)
+McoAppRegister::McoAppRegister(vanetza::Clock::duration& interval, Application& application):
+interval_(interval), min_interval(interval_.count()), application_(application)
 {
 
     app_name = "";
@@ -14,20 +14,18 @@ interval_(interval)
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class):
-interval_(interval), traffic_class_(traffic_class)
-{
-    std::cout << "El traffic class de " << cadena << " es " << traffic_class_ << std::endl;
+McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class, Application& application):
+interval_(interval), traffic_class_(traffic_class), min_interval(interval_.count()), application_(application)
+{   
     app_name.assign(cadena);
     size_average = 0;
     interval_average = 0;
 
-
-}
+} //Se usa esta 
 
 
 McoAppRegister::McoAppRegister(McoAppRegister *appCopied):
-interval_(appCopied->interval_)
+interval_(appCopied->interval_), min_interval(interval_.count()), application_(appCopied->application_)
 {
 
     app_name.assign(appCopied->app_name);
@@ -43,8 +41,8 @@ interval_(appCopied->interval_)
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval):
-interval_(interval)
+McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval, Application& application):
+interval_(interval), min_interval(interval_.count()), application_(application)
 {
 
     app_name.assign(cadena);

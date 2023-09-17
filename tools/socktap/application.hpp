@@ -29,6 +29,7 @@ public:
     
 protected:
     DataConfirm request(const DataRequest&, DownPacketPtr);
+    DataConfirm request(const DataRequest&, DownPacketPtr, PortType PORT);
 
 private:
     friend class RouterContext;

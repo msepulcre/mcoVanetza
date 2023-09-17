@@ -70,6 +70,8 @@ public:
      */
     Hook<const geonet::DataIndication&, const btp::DataIndication*> hook_undispatched;
 
+    int use_mco_ = 0;
+
 private:
     typedef std::unordered_map<port_type, IndicationInterface*> port_map;
     typedef std::list<PromiscuousHook*> hook_list;

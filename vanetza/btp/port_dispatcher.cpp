@@ -1,6 +1,8 @@
 #include "port_dispatcher.hpp"
 #include "data_indication.hpp"
+#include "ports.hpp"
 #include <vanetza/geonet/data_indication.hpp>
+
 #include <algorithm>
 #include <cassert>
 
@@ -70,10 +72,22 @@ void PortDispatcher::indicate(
     IndicationInterface* handler = nullptr;
 
     if (btp_ind) {
-        if (btp_ind->source_port) {
-            handler = m_interactive_handlers[btp_ind->destination_port];
-        } else {
-            handler = m_non_interactive_handlers[btp_ind->destination_port];
+        if(use_mco_ == 1){
+
+            if (btp_ind->source_port) {
+                handler = m_interactive_handlers[btp::ports::MCO];
+            } else {
+                handler = m_non_interactive_handlers[btp::ports::MCO];
+            }
+
+        } else{
+
+            if (btp_ind->source_port) {
+                handler = m_interactive_handlers[btp_ind->destination_port];
+            } else {
+                handler = m_non_interactive_handlers[btp_ind->destination_port];
+            }   
+
         }
 
         for (PromiscuousHook* hook : m_promiscuous_hooks) {

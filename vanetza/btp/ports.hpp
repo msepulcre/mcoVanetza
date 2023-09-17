@@ -15,6 +15,11 @@ namespace ports
 
 // Port numbers according to ETSI TS 103 248 v2.1.1 (2021-08)
 static const port_type CAM = host_cast<uint16_t>(2001);
+static const port_type CAM1 = host_cast<uint16_t>(3001);
+static const port_type CAM2 = host_cast<uint16_t>(4001);
+static const port_type CAM3 = host_cast<uint16_t>(5001);
+static const port_type CAM4 = host_cast<uint16_t>(6001);
+static const port_type MCO = host_cast<uint16_t>(8520);
 static const port_type DENM = host_cast<uint16_t>(2002);
 static const port_type TOPO = host_cast<uint16_t>(2003);
 static const port_type SPAT = host_cast<uint16_t>(2004);
