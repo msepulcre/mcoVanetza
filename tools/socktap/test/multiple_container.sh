@@ -4,7 +4,18 @@ cd /home/yeray/proyectos/mcoVanetza/tools/socktap/test
 
 if [ "$2" == "a" ];then
     sudo ./conteneriza.sh
+
+else
+
+    for((i = 1; i <= $1; i++)); do
+    
+        sudo docker stop socktap$i
+
+    done
+
 fi
+
+
 
 for((i = 1; i <= $1; i++)); do
     

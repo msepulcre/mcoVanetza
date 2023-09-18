@@ -220,7 +220,7 @@ void McoFac::set_adapt_interval(){
             
             for(auto iter_app : my_list){
 
-                if(iter_app.traffic_class_ = i){
+                if(iter_app.traffic_class_ == i){
 
                     fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval * 1000000)); // s / s
                     // fraccion de tiempo que la clase i pide
@@ -232,7 +232,7 @@ void McoFac::set_adapt_interval(){
 
                 for(McoAppRegister& iter_app : my_list){
 
-                    if(iter_app.traffic_class_ = i){
+                    if(iter_app.traffic_class_ == i){
                         
                         std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << iter_app.min_interval << std::endl;
                         iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
@@ -249,10 +249,10 @@ void McoFac::set_adapt_interval(){
 
                 for(McoAppRegister& iter_app : my_list){
 
-                    if((iter_app.traffic_class_ = i) && (iter_app.size_average > 0)){
+                    if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
-                        unsigned Ton = iter_app.size_average / data_speed;
-                        unsigned Toff = Ton / adapt_delta;
+                        unsigned Ton = iter_app.size_average / data_speed; //s
+                        unsigned Toff = Ton / adapt_delta; //s
                         
                         std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << Ton + Toff << std::endl;
                         iter_app.interval_ = std::chrono::seconds(Ton + Toff);
@@ -319,6 +319,8 @@ void McoFac::CBR_update(){
     double time_ocuped = byte_counter / data_speed;
 
     CBR = time_ocuped / mco_interval_.count();
+
+    std::cout << "CBR: " << CBR << std::endl;
 
     byte_counter = 0;
 
@@ -399,7 +401,7 @@ void McoFac::on_timer(Clock::time_point)
 
     CBR_update();
 
-    /* set_adapt_interval(); */
+    set_adapt_interval();
 
 
 
