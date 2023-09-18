@@ -27,26 +27,26 @@ McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
     schedule_timer();
 }
 
-McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, std::string app_name, PortType PORT) //YERAY
+McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, PortType PORT) //YERAY
 {
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
     byte_counter  += packet->size();
 
-    register_packet(app_name, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    register_packet(PORT, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
     confirm = Application::request(request, std::move(packet), PORT);
     return confirm;
 }
 
-void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTime ){
+void McoFac::register_packet(PortType PORT, float msgSize, int64_t msgTime ){
 
     McoAppRegister* app_registered;
 
     for(McoAppRegister&iter : my_list){
 
-        if(iter.app_name == app_name){
+        if(iter.PORT_ == PORT){
             
             app_registered = &iter;
             break;
@@ -57,61 +57,18 @@ void McoFac::register_packet(std::string app_name, float msgSize, int64_t msgTim
 
     app_registered->msg_data_list.push_back({msgSize, msgTime});
 
-    std::cout << "El tamaño de la lista de datos de " << app_registered->app_name << " es " 
+    std::cout << "El tamaño de la lista de datos de la aplicacion cuyo puerto es " << app_registered->PORT_ << " es " 
     << app_registered->msg_data_list.size() << std::endl;
     
 
 }
 
-std::string McoFac::rand_name(){
-
-    char strrnd[10];
-    srand(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-    for(int i=0; i <= 9; i++){
-        strrnd[i] = 33 + rand() % (126 - 33);
-    }
-    return strrnd;
-
-}
-
-bool McoFac::search_in_list(std::string app_name){
-    for(auto iter : my_list){
-
-        if(iter.app_name == app_name){
-
-            return true;
-        }
-
-    }
-    return false;
-
-}
-
-std::string McoFac::register_app(vanetza::Clock::duration& interval_,  Application& application){ 
-
-    bool name_used;
-    std::string app_name;
-    
-    do{
-        app_name = rand_name();
-        name_used = search_in_list(app_name);
-
-        if(!name_used){
+void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  Application& application){ 
             
-            
-            my_list.push_back(McoAppRegister(app_name, interval_, rand_traffic_class(), application));
-            std::cout << "Se ha registrado la aplicacion con el nombre: " << app_name << std::endl;
-
-        } else{
-
-            std::cout << "El nombre "<< app_name <<" ya esta en uso" << std::endl;
-        }
-
-    }while(name_used);
+    my_list.push_back(McoAppRegister(PORT, interval_, rand_traffic_class(), application));
+    std::cout << "Se ha registrado la aplicacion con el puerto: " << PORT << std::endl;
 
     std::cout << "El numero de aplicaciones registradas es: " << my_list.size() << std::endl;
-
-    return app_name;
 
 }
 
@@ -234,7 +191,7 @@ void McoFac::set_adapt_interval(){
 
                     if(iter_app.traffic_class_ == i){
                         
-                        std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << iter_app.min_interval << std::endl;
+                        std::cout << "El intervalo de la aplicacion cuyo puerto es " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
                         iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
 
                         adapt_delta -= fraction_time;
@@ -254,7 +211,7 @@ void McoFac::set_adapt_interval(){
                         unsigned Ton = iter_app.size_average / data_speed; //s
                         unsigned Toff = Ton / adapt_delta; //s
                         
-                        std::cout << "El intervalo de la aplicacion " << iter_app.app_name << " se modificó a: " << Ton + Toff << std::endl;
+                        std::cout << "El intervalo de la aplicacion " << iter_app.PORT_ << " se modificó a: " << Ton + Toff << std::endl;
                         iter_app.interval_ = std::chrono::seconds(Ton + Toff);
 
                     }
@@ -276,21 +233,6 @@ int McoFac::rand_traffic_class(){
 
     return rand() % 4; 
 
-}
-
-int McoFac::search_traffic_class(std::string app_name){
-
-    for(auto iter : my_list){
-
-        if(app_name ==  iter.app_name){
-
-            return iter.traffic_class_;
-        }
-
-
-    }
-
-    return 3;
 }
 
 Application* McoFac::search_port(vanetza::btp::port_type PORT){

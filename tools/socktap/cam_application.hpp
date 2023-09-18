@@ -22,9 +22,8 @@ public:
     void print_received_message(bool flag);
     void print_generated_message(bool flag);
 
-    std::string app_name;
     int use_mco_;
-    int app_number;
+    int PORT_number;
 
 private:
     void schedule_timer();

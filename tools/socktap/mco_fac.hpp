@@ -23,13 +23,11 @@ public:
     
     McoFac(vanetza::PositionProvider& positioning, vanetza::Runtime& rt); 
 
-    bool search_in_list(std::string app_name);
+    DataConfirm mco_data_request(const DataRequest&, DownPacketPtr, PortType PORT); 
 
-    std::string register_app(vanetza::Clock::duration& interval_, Application& application);
+    void register_app(PortType PORT ,vanetza::Clock::duration& interval_, Application& application);
 
-    void register_packet(std::string app_name, float msgSize, int64_t msgTime);
-
-    std::string rand_name();
+    void register_packet(PortType PORT, float msgSize, int64_t msgTime);
     
     void clean_outdated();
 
@@ -42,8 +40,6 @@ public:
     void set_adapt_interval();
 
     int rand_traffic_class();
-
-    int search_traffic_class(std::string app_name);
 
     Application* search_port(vanetza::btp::port_type PORT);
 
@@ -64,7 +60,6 @@ public:
     void set_interval(vanetza::Clock::duration);
     void print_received_message(bool flag);
     void print_generated_message(bool flag);
-    DataConfirm mco_data_request(const DataRequest&, DownPacketPtr, std::string app_name, PortType PORT); 
 
     std::list<McoAppRegister> my_list;
 

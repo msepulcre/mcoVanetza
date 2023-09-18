@@ -2,17 +2,21 @@
 #define MCO_APP_REGISTER_PSIGPUTG
 
 #include "application.hpp"
+#include <vanetza/btp/ports.hpp>
 #include <vanetza/common/clock.hpp>
 #include <iostream>
 #include <string.h>
 #include <cstring>
 #include <list>
 
+
 class McoAppRegister
 {
 public:
+
+    using PortType = vanetza::btp::port_type;
     
-    std::string app_name;
+    PortType PORT_;
     
     struct MsgData{
 
@@ -36,9 +40,9 @@ public:
     Application& application_;
     
     McoAppRegister(vanetza::Clock::duration& interval, Application& application);
-    McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class, Application& application);
+    McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, int traffic_class, Application& application);
     McoAppRegister(McoAppRegister *appCopied);
-    McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval, Application& application);
+    McoAppRegister(PortType PORT, float size, int64_t time, vanetza::Clock::duration& interval, Application& application);
 
 };
 

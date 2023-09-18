@@ -8,16 +8,14 @@ McoAppRegister::McoAppRegister(vanetza::Clock::duration& interval, Application& 
 interval_(interval), min_interval(interval_.count()), application_(application)
 {
 
-    app_name = "";
     size_average = 0;
     interval_average = 0;
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, vanetza::Clock::duration& interval, int traffic_class, Application& application):
-interval_(interval), traffic_class_(traffic_class), min_interval(interval_.count()), application_(application)
+McoAppRegister::McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, int traffic_class, Application& application):
+PORT_(PORT) ,interval_(interval), traffic_class_(traffic_class), min_interval(interval_.count()), application_(application)
 {   
-    app_name.assign(cadena);
     size_average = 0;
     interval_average = 0;
 
@@ -28,7 +26,7 @@ McoAppRegister::McoAppRegister(McoAppRegister *appCopied):
 interval_(appCopied->interval_), min_interval(interval_.count()), application_(appCopied->application_)
 {
 
-    app_name.assign(appCopied->app_name);
+    PORT_ = appCopied->PORT_;
     
     for(MsgData &iter : appCopied->msg_data_list){
 
@@ -41,11 +39,11 @@ interval_(appCopied->interval_), min_interval(interval_.count()), application_(a
 
 }
 
-McoAppRegister::McoAppRegister(std::string cadena, float size, int64_t time, vanetza::Clock::duration& interval, Application& application):
+McoAppRegister::McoAppRegister(PortType PORT, float size, int64_t time, vanetza::Clock::duration& interval, Application& application):
 interval_(interval), min_interval(interval_.count()), application_(application)
 {
 
-    app_name.assign(cadena);
+    PORT_ = PORT;
     msg_data_list.push_back({size , time});
     size_average = size;
     interval_average = 0;

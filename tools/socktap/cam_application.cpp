@@ -20,9 +20,9 @@ using namespace std::chrono;
 CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
 {
-    app_number = mco_.my_list.size();
+    PORT_number = mco_.my_list.size();
 
-    app_name = mco.register_app(cam_interval_, *this);
+    mco.register_app(port() ,cam_interval_, *this);
 
     schedule_timer();
 
@@ -59,7 +59,7 @@ CamApplication::PortType CamApplication::port()
 {
     if(use_mco_ != 0 ){
 
-        switch(app_number){
+        switch(PORT_number){
 
             case 0:
 
@@ -186,7 +186,7 @@ void CamApplication::on_timer(Clock::time_point)
     
     if(use_mco_  !=  0){
 
-        confirm = mco_.mco_data_request(request, std::move(packet), app_name, port()); 
+        confirm = mco_.mco_data_request(request, std::move(packet), port()); 
 
     } 
     else{
