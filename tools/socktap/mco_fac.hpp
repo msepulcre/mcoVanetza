@@ -47,6 +47,14 @@ public:
 
     void CBR_update();
 
+    /* void list_counter_update(unsigned packet_size);
+
+    void CBR_update2(); */
+
+    void set_min_interval();
+
+    void set_apps_number();
+
     double adapt_delta;
 
     double CBR_target;
@@ -54,6 +62,8 @@ public:
     double CBR;
 
     unsigned byte_counter;
+
+    int apps_number[4] = {0, 0, 0, 0};
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
@@ -67,8 +77,7 @@ public:
     
     vanetza::geonet::Router* router_;
     vanetza::geonet::GbcDataRequest request_gbc(const DataRequest&);
-    vanetza::geonet::ShbDataRequest request_shb(const DataRequest&);
-//Esto para que? */
+    vanetza::geonet::ShbDataRequest request_shb(const DataRequest&); */
     
 private:
     void schedule_timer();

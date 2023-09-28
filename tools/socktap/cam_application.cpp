@@ -1,4 +1,5 @@
 #include "cam_application.hpp"
+/* #include <log4cxx/logger.h> */
 #include <vanetza/btp/ports.hpp>
 #include <vanetza/asn1/cam.hpp>
 #include <vanetza/asn1/packet_visitor.hpp>
@@ -15,7 +16,9 @@
 using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
+/* using namespace log4cxx; */
 
+/* extern LoggerPtr loggerMyMain; */
 
 CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
@@ -92,12 +95,13 @@ CamApplication::PortType CamApplication::port()
 
     } else{
 
-        return btp::ports::CAM;
+        return btp::ports::CAM4;
     }
 }
 
 void CamApplication::indicate(const DataIndication& indication, UpPacketPtr packet)
 {   
+    /* LOG4CXX_INFO(loggerMyMain, "logger indicate"); */
     asn1::PacketVisitor<asn1::Cam> visitor;
     std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
 

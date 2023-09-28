@@ -33,7 +33,7 @@ public:
 
     int traffic_class_;
 
-    const unsigned min_interval; //microsegundos
+    unsigned min_interval; //microsegundos
 
     std::list<MsgData> msg_data_list;
 

@@ -12,23 +12,24 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
-/* #include <log4cxx/logger.h>
-#include <log4cxx/xml/domconfigurator.h> */
 
+#include <log4cxx/logger.h>
+#include <log4cxx/xml/domconfigurator.h>
 
-/* using namespace log4cxx;
+using namespace vanetza;
+using namespace log4cxx;
 using namespace log4cxx::xml;
-using namespace log4cxx::helpers; */
+using namespace log4cxx::helpers;
 
 namespace asio = boost::asio;
 namespace gn = vanetza::geonet;
 namespace po = boost::program_options;
-using namespace vanetza;
+
+
+LoggerPtr loggerMyMain(Logger::getLogger( "main"));
 
 int main(int argc, const char** argv)
 {
-    /* DOMConfigurator::configure("/usr/local/src/Log4cxxConfig.xml"); */
-    
     po::options_description options("Allowed options");
     options.add_options()
         ("help", "Print out available options.")
@@ -39,7 +40,7 @@ int main(int argc, const char** argv)
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
         ("cam-interval", po::value<unsigned>()->default_value(100), "CAM sending interval in milliseconds.")
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
-        ("cbr_target,c", po::value<double>()->default_value(0.68), "CBR target")
+        ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
         ("num_ca, n", po::value<int>()->default_value(5), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
@@ -50,6 +51,8 @@ int main(int argc, const char** argv)
     ;
     add_positioning_options(options);
     add_security_options(options);
+
+    DOMConfigurator::configure("/usr/local/src/Log4cxxConfig.xml");
 
     po::positional_options_description positional_options;
     positional_options.add("interface", 1);
@@ -173,7 +176,8 @@ int main(int argc, const char** argv)
             }
 
             
-
+            /* LOG4CXX_INFO(loggerMyMain, "Logger en el main"); */
+            
             if (app_name == "ca") {
 
                 int num_ca = vm["num_ca"].as<int>();
@@ -197,7 +201,8 @@ int main(int argc, const char** argv)
                     }  
                     std::string str_num = std::to_string(i);
                     std::string iter_name = "ca" + str_num;
-                
+
+                    
                     ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
                     ca->print_received_message(vm.count("print-rx-cam") > 0);
                     ca->print_generated_message(vm.count("print-tx-cam") > 0);
@@ -206,6 +211,8 @@ int main(int argc, const char** argv)
                 }
 
                 if(use_mco != 0){
+                    mco->set_min_interval();
+                    mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones
                     apps.emplace("mco", std::move(mco)); 
                 }
                 

@@ -1,4 +1,5 @@
 #include "mco_fac.hpp"
+/* #include <log4cxx/logger.h> */
 #include <cstring>
 #include <iostream>
 #include <ctime>
@@ -14,12 +15,11 @@
 #include <functional>
 #include <iostream>
 
-
-// This is a very simple CA application sending CAMs at a fixed rate.
-
 using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
+
+/* using namespace log4cxx; */
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
     positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
@@ -27,7 +27,7 @@ McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
     schedule_timer();
 }
 
-McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, PortType PORT) //YERAY
+McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, PortType PORT)
 {
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
@@ -164,14 +164,7 @@ void McoFac::set_adapt_interval(){
 
     if(my_list.size() != 0){
 
-        int apps_number[4] = {0 , 0, 0, 0}; //numero de aplicaciones de cada traffic class
-
-        for(McoAppRegister& iter_app : my_list){
-
-            apps_number[iter_app.traffic_class_]++;
-        }
-
-        for(int i = 0; (i < 4) && (adapt_delta != 0) ; i++){
+        for(int i = 0; (i < 4) && (adapt_delta != 0) ; i++){ //itera en cada traffic class
 
             float fraction_time = 0;
             
@@ -191,7 +184,7 @@ void McoFac::set_adapt_interval(){
 
                     if(iter_app.traffic_class_ == i){
                         
-                        std::cout << "El intervalo de la aplicacion cuyo puerto es " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
+                        std::cout << "El intervalo de la aplicacion de puerto " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
                         iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
 
                         adapt_delta -= fraction_time;
@@ -254,20 +247,6 @@ Application* McoFac::search_port(vanetza::btp::port_type PORT){
     return aplication;
 }
 
-void McoFac::CBR_update(){
-
-    const double data_speed = 0.75 * 1000000000000; // bytes/microseconds
-
-    double time_ocuped = byte_counter / data_speed;
-
-    CBR = time_ocuped / mco_interval_.count();
-
-    std::cout << "CBR: " << CBR << std::endl;
-
-    byte_counter = 0;
-
-}
-
 void McoFac::byte_counter_update(unsigned packet_size){
 
     const unsigned network_header = 0;
@@ -281,6 +260,39 @@ void McoFac::byte_counter_update(unsigned packet_size){
     packet_size += header_size;
 
     byte_counter += packet_size;
+
+}
+
+void McoFac::CBR_update(){
+
+    const double data_speed = 0.75 * 1000000000000; // bytes/microseconds
+
+    double time_ocuped = byte_counter / data_speed;
+
+    CBR = ((time_ocuped / mco_interval_.count()) + CBR) * 0.5;
+
+    std::cout << "CBR: " << CBR << std::endl;
+
+    byte_counter = 0;
+
+}
+
+void McoFac::set_min_interval(){
+
+    for(auto& iter_app : my_list){
+
+        iter_app.min_interval = iter_app.interval_.count();
+
+    }
+
+}
+
+void McoFac::set_apps_number(){
+
+    for(McoAppRegister& iter_app : my_list){
+
+        apps_number[iter_app.traffic_class_]++;
+    }
 
 }
 
@@ -311,11 +323,14 @@ void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
 {   
     std::cout << "MCO received a packet" << std::endl;
     Application* application = search_port(indication.destination_port);
-    
-    asn1::PacketVisitor<asn1::Cam> visitor;
-    std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
 
-    byte_counter_update(cam->size());
+    if(indication.destination_port == btp::ports::CAM || indication.destination_port == btp::ports::CAM1 || indication.destination_port == btp::ports::CAM2
+     || indication.destination_port == btp::ports::CAM3 || indication.destination_port == btp::ports::CAM4){
+
+        asn1::PacketVisitor<asn1::Cam> visitor;
+        std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
+        byte_counter_update(cam->size());
+    }
 
     application->indicate(indication, std::move(packet));
 
