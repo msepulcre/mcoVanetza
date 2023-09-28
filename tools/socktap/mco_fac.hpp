@@ -47,13 +47,15 @@ public:
 
     void CBR_update();
 
-    /* void list_counter_update(unsigned packet_size);
-
-    void CBR_update2(); */
-
     void set_min_interval();
 
+    void set_min_interval(vanetza::btp::port_type PORT, vanetza::Clock::duration interval);
+
     void set_apps_number();
+
+    void set_traffic_class(int traffic_class);
+
+    void set_traffic_class(int traffic_class, vanetza::btp::port_type PORT);
 
     double adapt_delta;
 

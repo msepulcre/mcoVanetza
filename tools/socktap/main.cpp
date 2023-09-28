@@ -43,6 +43,11 @@ int main(int argc, const char** argv)
         ("cam-interval2", po::value<unsigned>()->default_value(300), "CAM sending interval in milliseconds.")
         ("cam-interval3", po::value<unsigned>()->default_value(400), "CAM sending interval in milliseconds.")
         ("cam-interval4", po::value<unsigned>()->default_value(500), "CAM sending interval in milliseconds.")
+        ("cam-traffic-class0", po::value<int>()->default_value(0), "CAM's traffic class")
+        ("cam-traffic-class1", po::value<int>()->default_value(1), "CAM's traffic class")
+        ("cam-traffic-class2", po::value<int>()->default_value(2), "CAM's traffic class")
+        ("cam-traffic-class3", po::value<int>()->default_value(3), "CAM's traffic class")
+        ("cam-traffic-class4", po::value<int>()->default_value(4), "CAM's traffic class")
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
@@ -184,7 +189,7 @@ int main(int argc, const char** argv)
             
             if (app_name == "ca") {
 
-                int num_ca = vm["num_ca"].as<int>();
+                    int num_ca = vm["num_ca"].as<int>();
 
                 int i;
 
@@ -206,16 +211,28 @@ int main(int argc, const char** argv)
                     std::string str_num = std::to_string(i);
                     std::string iter_name = "ca" + str_num;
                     std::string cam_interval_i = "cam-interval"+str_num;
+                    std::string cam_traffic_class_i = "cam-traffic-class"+str_num;
                     
                     ca->set_interval(std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
                     ca->print_received_message(vm.count("print-rx-cam") > 0);
                     ca->print_generated_message(vm.count("print-tx-cam") > 0);
-                    apps.emplace(iter_name, std::move(ca));
                     
+
+                    if(use_mco != 0){
+                        /* mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>())); */
+
+                        int traffic_class = vm[cam_traffic_class_i].as<int>();
+                        mco->set_traffic_class(traffic_class); //no debe haber ningun otro hilo en este momento que pueda registrar otra aplicacion
+                        // si lo hay, es facil identificar la aplicacion por su puerto, pero el codigo es mas largo
+
+                        /* mco->set_traffic_class(traffic_class, ca->port()); */
+                    }
+
+                    apps.emplace(iter_name, std::move(ca));
                 }
-                std::cout << "Ha funcionado" << std::endl;
+                
                 if(use_mco != 0){
-                    mco->set_min_interval();
+                    mco->set_min_interval(); //podria cambiarlo para que se setee justo despues de ca->set_interval y en buscando el puerto
                     mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones
                     apps.emplace("mco", std::move(mco)); 
                 }

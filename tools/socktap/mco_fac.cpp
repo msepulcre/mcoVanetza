@@ -287,11 +287,61 @@ void McoFac::set_min_interval(){
 
 }
 
+void McoFac::set_min_interval(vanetza::btp::port_type PORT, vanetza::Clock::duration interval){
+
+    for(auto& iter_app : my_list){
+
+        if(iter_app.PORT_ == PORT){
+
+            iter_app.min_interval = interval.count();
+
+        }
+    }
+
+}
+
 void McoFac::set_apps_number(){
 
     for(McoAppRegister& iter_app : my_list){
 
         apps_number[iter_app.traffic_class_]++;
+    }
+
+}
+
+void McoFac::set_traffic_class(int traffic_class){
+
+    auto& last_app = my_list.back();
+    
+    if(traffic_class < 4 && traffic_class >= 0){
+
+        last_app.traffic_class_ = traffic_class;
+    
+    } else{
+
+        last_app.traffic_class_ = 3;
+
+    }
+}
+
+void McoFac::set_traffic_class(int traffic_class, vanetza::btp::port_type PORT){
+
+    for(auto& iter_app : my_list){
+
+        if(iter_app.PORT_ == PORT){
+
+            if(traffic_class < 4 && traffic_class >= 0){
+
+                iter_app.traffic_class_ = traffic_class;
+    
+            } else{
+
+                iter_app.traffic_class_ = 3;
+
+            }
+
+        }
+
     }
 
 }
