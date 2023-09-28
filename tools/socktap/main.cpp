@@ -38,7 +38,11 @@ int main(int argc, const char** argv)
         ("mac-address", po::value<std::string>(), "Override the network interface's MAC address.")
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
-        ("cam-interval", po::value<unsigned>()->default_value(100), "CAM sending interval in milliseconds.")
+        ("cam-interval0", po::value<unsigned>()->default_value(100), "CAM sending interval in milliseconds.")
+        ("cam-interval1", po::value<unsigned>()->default_value(200), "CAM sending interval in milliseconds.")
+        ("cam-interval2", po::value<unsigned>()->default_value(300), "CAM sending interval in milliseconds.")
+        ("cam-interval3", po::value<unsigned>()->default_value(400), "CAM sending interval in milliseconds.")
+        ("cam-interval4", po::value<unsigned>()->default_value(500), "CAM sending interval in milliseconds.")
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
@@ -201,15 +205,15 @@ int main(int argc, const char** argv)
                     }  
                     std::string str_num = std::to_string(i);
                     std::string iter_name = "ca" + str_num;
-
+                    std::string cam_interval_i = "cam-interval"+str_num;
                     
-                    ca->set_interval(std::chrono::milliseconds(vm["cam-interval"].as<unsigned>()));  
+                    ca->set_interval(std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
                     ca->print_received_message(vm.count("print-rx-cam") > 0);
                     ca->print_generated_message(vm.count("print-tx-cam") > 0);
                     apps.emplace(iter_name, std::move(ca));
                     
                 }
-
+                std::cout << "Ha funcionado" << std::endl;
                 if(use_mco != 0){
                     mco->set_min_interval();
                     mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones

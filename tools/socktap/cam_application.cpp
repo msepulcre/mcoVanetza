@@ -101,7 +101,6 @@ CamApplication::PortType CamApplication::port()
 
 void CamApplication::indicate(const DataIndication& indication, UpPacketPtr packet)
 {   
-    /* LOG4CXX_INFO(loggerMyMain, "logger indicate"); */
     asn1::PacketVisitor<asn1::Cam> visitor;
     std::shared_ptr<const asn1::Cam> cam = boost::apply_visitor(visitor, *packet);
 
