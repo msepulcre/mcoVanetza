@@ -51,7 +51,7 @@ int main(int argc, const char** argv)
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
-        ("num_ca, n", po::value<int>()->default_value(5), "number of application CA")
+        ("num_ca, n", po::value<int>()->default_value(6), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -198,18 +198,22 @@ int main(int argc, const char** argv)
                     std::unique_ptr<CamApplication> ca;
 
                     if(use_mco != 0){
-
                     
-                        ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime(), use_mco);
-                    
+                        ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime(), use_mco); 
 
                     } else{
 
                         ca = std::make_unique<CamApplication>(*mco, *positioning, trigger.runtime());
 
-                    }  
+                    }
+
                     std::string str_num = std::to_string(i);
                     std::string iter_name = "ca" + str_num;
+                    if(i < 0 || i > 4){ //incrementar valor si se implementa en el codigo un mayor numero de cam_interval y traffic_class dadas por argumento
+
+                        str_num = std::to_string(4);
+
+                    }
                     std::string cam_interval_i = "cam-interval"+str_num;
                     std::string cam_traffic_class_i = "cam-traffic-class"+str_num;
                     
@@ -233,7 +237,7 @@ int main(int argc, const char** argv)
                 
                 if(use_mco != 0){
                     mco->set_min_interval(); //podria cambiarlo para que se setee justo despues de ca->set_interval y en buscando el puerto
-                    mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones
+                    mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones (traffic class)
                     apps.emplace("mco", std::move(mco)); 
                 }
                 
