@@ -21,7 +21,7 @@ public:
     struct MsgData{
 
         float msgSize; //bytes
-        int64_t msgTime;  
+        int64_t msgTime; //microseconds
 
     };
 

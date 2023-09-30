@@ -34,7 +34,7 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
 
     byte_counter  += packet->size();
 
-    register_packet(PORT, packet->size(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    register_packet(PORT, packet->size(), std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
     confirm = Application::request(request, std::move(packet), PORT);
     return confirm;
@@ -74,8 +74,8 @@ void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  A
 
 void McoFac::clean_outdated(){
 
-    const float delated_time = 5000;
-    auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const float delated_time = 5000000; //microseconds
+    auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
 
@@ -160,7 +160,7 @@ void McoFac::calc_adapt_delta(){
 
 void McoFac::set_adapt_interval(){
 
-    const double data_speed = 0.75 * 1000000; // byte/s
+    const double data_speed = 0.75; // byte/microsecond
 
     if(my_list.size() != 0){
 
@@ -172,7 +172,7 @@ void McoFac::set_adapt_interval(){
 
                 if(iter_app.traffic_class_ == i){
 
-                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval * 1000000)); // s / s
+                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval)); // s / s
                     // fraccion de tiempo que la clase i pide
                 }
 
@@ -195,21 +195,42 @@ void McoFac::set_adapt_interval(){
 
             } else{ //si es mayor
 
-                adapt_delta /= apps_number[i];
+                /* adapt_delta /= apps_number[i]; */
+                double CRi = 0;
 
                 for(McoAppRegister& iter_app : my_list){
 
                     if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
-                        unsigned Ton = iter_app.size_average / data_speed; //s
-                        unsigned Toff = Ton / adapt_delta; //s
+                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average));
+                        //recursos consumidos por aplicacion j de traffic class i
+                        CRi += CREij;
+                        //recursos totales consumidos por traffic class i
+                    }
+
+                }
+
+                for(McoAppRegister& iter_app : my_list){
+
+                    if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){ 
+                        //CUIDADO!! si la lista de estadisticas de mensajes se resetea entera antes de este set
+                        //esa aplicacion se saltará este control
                         
-                        std::cout << "El intervalo de la aplicacion " << iter_app.PORT_ << " se modificó a: " << Ton + Toff << std::endl;
-                        iter_app.interval_ = std::chrono::seconds(Ton + Toff);
+                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //microseconds / microseconds
+                        //Esto tal vez mejor almacenarlo en el registro de la aplicacion para no tener que calcular el valor 2 veces 
+
+                        double ACRij = (CREij / CRi) * adapt_delta;
+
+                        unsigned Tonij = iter_app.size_average / data_speed; //microseconds
+
+                        unsigned Toffij = Tonij *((1 - ACRij) / ACRij); //microseconds
+
+                        iter_app.interval_ = std::chrono::microseconds(Tonij + Toffij);
 
                     }
 
                 }
+
                 adapt_delta = 0;
                 
             }
@@ -265,9 +286,9 @@ void McoFac::byte_counter_update(unsigned packet_size){
 
 void McoFac::CBR_update(){
 
-    const double data_speed = 0.75 * 1000000000000; // bytes/microseconds
+    const double data_speed = 0.75; // bytes/microseconds
 
-    double time_ocuped = byte_counter / data_speed;
+    double time_ocuped = byte_counter / data_speed; //microseconds
 
     CBR = ((time_ocuped / mco_interval_.count()) + CBR) * 0.5;
 
