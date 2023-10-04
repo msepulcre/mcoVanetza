@@ -160,11 +160,13 @@ void McoFac::calc_adapt_delta(){
 
 void McoFac::set_adapt_interval(){
 
-    const double data_speed = 0.75; // byte/microsecond
+    const double data_speed = 0.75; // byte/us
 
     if(my_list.size() != 0){
 
-        for(int i = 0; (i < 4) && (adapt_delta != 0) ; i++){ //itera en cada traffic class
+        float ACRi = adapt_delta;
+
+        for(int i = 0; (i < 4) && (ACRi != 0) ; i++){ //itera en cada traffic class
 
             float fraction_time = 0;
             
@@ -172,13 +174,13 @@ void McoFac::set_adapt_interval(){
 
                 if(iter_app.traffic_class_ == i){
 
-                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval)); // s / s
+                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval)); // us / us
                     // fraccion de tiempo que la clase i pide
                 }
 
             }
 
-            if(fraction_time <= adapt_delta){ //si la fraccion de tiempo que se pide es menor que la que se ofrece:
+            if(fraction_time <= ACRi){ //si la fraccion de tiempo que se pide es menor que la que se ofrece:
 
                 for(McoAppRegister& iter_app : my_list){
 
@@ -187,18 +189,16 @@ void McoFac::set_adapt_interval(){
                         std::cout << "El intervalo de la aplicacion de puerto " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
                         iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
 
-                        adapt_delta -= fraction_time;
+                        ACRi -= fraction_time;
 
                     }
 
                 }
 
             } else{ //si es mayor
-
-                /* adapt_delta /= apps_number[i]; */
                 double CRi = 0;
 
-                for(McoAppRegister& iter_app : my_list){
+                for(McoAppRegister& iter_app : my_list){ //Inicializacion de CRi
 
                     if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
@@ -216,14 +216,14 @@ void McoFac::set_adapt_interval(){
                         //CUIDADO!! si la lista de estadisticas de mensajes se resetea entera antes de este set
                         //esa aplicacion se saltará este control
                         
-                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //microseconds / microseconds
-                        //Esto tal vez mejor almacenarlo en el registro de la aplicacion para no tener que calcular el valor 2 veces 
+                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //us / us
+                        //Esto tal vez mejor almacenarlo en el registro de la aplicacion en el anterior for para no tener que calcular el valor 2 veces 
 
-                        double ACRij = (CREij / CRi) * adapt_delta;
+                        double ACRij = (CREij / CRi) * ACRi;
 
-                        unsigned Tonij = iter_app.size_average / data_speed; //microseconds
+                        unsigned Tonij = iter_app.size_average / data_speed; //us
 
-                        unsigned Toffij = Tonij *((1 - ACRij) / ACRij); //microseconds
+                        unsigned Toffij = Tonij *((1 - ACRij) / ACRij); //us
 
                         iter_app.interval_ = std::chrono::microseconds(Tonij + Toffij);
 
@@ -231,7 +231,7 @@ void McoFac::set_adapt_interval(){
 
                 }
 
-                adapt_delta = 0;
+                ACRi = 0;
                 
             }
 

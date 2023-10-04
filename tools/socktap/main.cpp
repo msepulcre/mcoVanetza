@@ -38,11 +38,11 @@ int main(int argc, const char** argv)
         ("mac-address", po::value<std::string>(), "Override the network interface's MAC address.")
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
-        ("cam-interval0", po::value<unsigned>()->default_value(100), "CAM sending interval in milliseconds.")
-        ("cam-interval1", po::value<unsigned>()->default_value(200), "CAM sending interval in milliseconds.")
-        ("cam-interval2", po::value<unsigned>()->default_value(300), "CAM sending interval in milliseconds.")
-        ("cam-interval3", po::value<unsigned>()->default_value(400), "CAM sending interval in milliseconds.")
-        ("cam-interval4", po::value<unsigned>()->default_value(500), "CAM sending interval in milliseconds.")
+        ("cam-min-interval0", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval1", po::value<unsigned>()->default_value(200), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval2", po::value<unsigned>()->default_value(300), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval3", po::value<unsigned>()->default_value(400), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval4", po::value<unsigned>()->default_value(500), "The first CAM sending interval in milliseconds and the minimum interval.")
         ("cam-traffic-class0", po::value<int>()->default_value(0), "CAM's traffic class")
         ("cam-traffic-class1", po::value<int>()->default_value(1), "CAM's traffic class")
         ("cam-traffic-class2", po::value<int>()->default_value(2), "CAM's traffic class")
@@ -51,7 +51,7 @@ int main(int argc, const char** argv)
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
-        ("num_ca, n", po::value<int>()->default_value(6), "number of application CA")
+        ("num_ca, n", po::value<int>()->default_value(11), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -214,7 +214,7 @@ int main(int argc, const char** argv)
                         str_num = std::to_string(4);
 
                     }
-                    std::string cam_interval_i = "cam-interval"+str_num;
+                    std::string cam_interval_i = "cam-min-interval"+str_num;
                     std::string cam_traffic_class_i = "cam-traffic-class"+str_num;
                     
                     ca->set_interval(std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
@@ -223,20 +223,17 @@ int main(int argc, const char** argv)
                     
 
                     if(use_mco != 0){
-                        /* mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>())); */
+                        mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
 
                         int traffic_class = vm[cam_traffic_class_i].as<int>();
-                        mco->set_traffic_class(traffic_class); //no debe haber ningun otro hilo en este momento que pueda registrar otra aplicacion
-                        // si lo hay, es facil identificar la aplicacion por su puerto, pero el codigo es mas largo
 
-                        /* mco->set_traffic_class(traffic_class, ca->port()); */
+                        mco->set_traffic_class(traffic_class, ca->port());
                     }
 
                     apps.emplace(iter_name, std::move(ca));
                 }
                 
                 if(use_mco != 0){
-                    mco->set_min_interval(); //podria cambiarlo para que se setee justo despues de ca->set_interval y en buscando el puerto
                     mco->set_apps_number(); //se debe hacer despues de registrar todas las aplicaciones (traffic class)
                     apps.emplace("mco", std::move(mco)); 
                 }
