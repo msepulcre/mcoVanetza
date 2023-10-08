@@ -25,15 +25,15 @@ public:
 
     };
 
-    float size_average;
+    double size_average;
 
-    float interval_average;
+    int64_t interval_average;
 
     vanetza::Clock::duration& interval_;
 
     int traffic_class_;
 
-    unsigned min_interval; //microsegundos
+    int64_t min_interval; //microsegundos
 
     std::list<MsgData> msg_data_list;
 

@@ -1,5 +1,4 @@
 #include "mco_fac.hpp"
-/* #include <log4cxx/logger.h> */
 #include <cstring>
 #include <iostream>
 #include <ctime>
@@ -19,8 +18,6 @@ using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
 
-/* using namespace log4cxx; */
-
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
     positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
 {
@@ -32,7 +29,7 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
-    byte_counter  += packet->size();
+    byte_counter_update(packet->size());
 
     register_packet(PORT, packet->size(), std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     
@@ -74,7 +71,7 @@ void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  A
 
 void McoFac::clean_outdated(){
 
-    const float delated_time = 5000000; //microseconds
+    const int delated_time = 5000000; //microseconds
     auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
@@ -103,7 +100,7 @@ void McoFac::apps_average_size(){
     for(McoAppRegister& iter_app : my_list){
         
         int num_iter_data = 0;
-        float data_sum = 0;
+        double data_sum = 0;
 
         for(auto iter_data : iter_app.msg_data_list ){
 
@@ -164,11 +161,11 @@ void McoFac::set_adapt_interval(){
 
     if(my_list.size() != 0){
 
-        float ACRi = adapt_delta;
+        double ACRi = adapt_delta;
 
         for(int i = 0; (i < 4) && (ACRi != 0) ; i++){ //itera en cada traffic class
 
-            float fraction_time = 0;
+            double fraction_time = 0;
             
             for(auto iter_app : my_list){
 
@@ -249,23 +246,22 @@ int McoFac::rand_traffic_class(){
 
 }
 
-Application* McoFac::search_port(vanetza::btp::port_type PORT){
-
-    Application* aplication = nullptr;
+Application& McoFac::search_port(vanetza::btp::port_type PORT){
 
     for(McoAppRegister& iter : my_list){
 
         if(iter.application_.port() == PORT){
 
-            aplication = &iter.application_;
+            Application& application = iter.application_;
 
-            break;
+            return application;
 
         }
 
     }
+    Application* application;
 
-    return aplication;
+    return *application; //no deberia devolver nunca este, en cuyo caso, la aplicacion buscada no existe
 }
 
 void McoFac::byte_counter_update(unsigned packet_size){
@@ -298,16 +294,6 @@ void McoFac::CBR_update(){
 
 }
 
-void McoFac::set_min_interval(){
-
-    for(auto& iter_app : my_list){
-
-        iter_app.min_interval = iter_app.interval_.count();
-
-    }
-
-}
-
 void McoFac::set_min_interval(vanetza::btp::port_type PORT, vanetza::Clock::duration interval){
 
     for(auto& iter_app : my_list){
@@ -328,21 +314,6 @@ void McoFac::set_apps_number(){
         apps_number[iter_app.traffic_class_]++;
     }
 
-}
-
-void McoFac::set_traffic_class(int traffic_class){
-
-    auto& last_app = my_list.back();
-    
-    if(traffic_class < 4 && traffic_class >= 0){
-
-        last_app.traffic_class_ = traffic_class;
-    
-    } else{
-
-        last_app.traffic_class_ = 3;
-
-    }
 }
 
 void McoFac::set_traffic_class(int traffic_class, vanetza::btp::port_type PORT){
@@ -393,7 +364,7 @@ McoFac::PortType McoFac::port()
 void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
 {   
     std::cout << "MCO received a packet" << std::endl;
-    Application* application = search_port(indication.destination_port);
+    Application& application = search_port(indication.destination_port);
 
     if(indication.destination_port == btp::ports::CAM || indication.destination_port == btp::ports::CAM1 || indication.destination_port == btp::ports::CAM2
      || indication.destination_port == btp::ports::CAM3 || indication.destination_port == btp::ports::CAM4){
@@ -403,7 +374,7 @@ void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
         byte_counter_update(cam->size());
     }
 
-    application->indicate(indication, std::move(packet));
+    application.indicate(indication, std::move(packet));
 
     /* std::cout << "MCO " << (cam ? "decodable" : "broken") << " content" << std::endl; */
     

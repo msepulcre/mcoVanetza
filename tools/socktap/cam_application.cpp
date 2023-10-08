@@ -1,5 +1,4 @@
 #include "cam_application.hpp"
-/* #include <log4cxx/logger.h> */
 #include <vanetza/btp/ports.hpp>
 #include <vanetza/asn1/cam.hpp>
 #include <vanetza/asn1/packet_visitor.hpp>
@@ -16,9 +15,6 @@
 using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
-/* using namespace log4cxx; */
-
-/* extern LoggerPtr loggerMyMain; */
 
 CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
    mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)

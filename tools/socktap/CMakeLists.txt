@@ -14,6 +14,7 @@ add_executable(socktap
     application.cpp
     mco_fac.cpp
     mco_app_register.cpp
+    logs_handler.cpp
     benchmark_application.cpp
     cam_application.cpp
     dcc_passthrough.cpp
@@ -29,7 +30,7 @@ add_executable(socktap
     udp_link.cpp
 )
 
-target_link_libraries(socktap PUBLIC Boost::system Boost::program_options Threads::Threads vanetza log4cxx)
+target_link_libraries(socktap PUBLIC Boost::system Boost::program_options Threads::Threads vanetza)
 install(TARGETS socktap EXPORT ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 find_file(COHDA_LLC_API_HEADER llc-api.c
@@ -54,8 +55,6 @@ if(SOCKTAP_WITH_COHDA_LLC)
     target_include_directories(socktap PUBLIC ${COHDA_LLC_INCLUDE_DIR})
     target_sources(socktap PRIVATE cohda.cpp cohda_link.cpp)
 endif()
-
-#file(COPY Log4cxxConfig.xml DESTINATION /usr/local/src)
 
 find_package(GPS QUIET)
 option(SOCKTAP_WITH_GPSD "Enable gpsd positioning for socktap" ${GPS_FOUND})

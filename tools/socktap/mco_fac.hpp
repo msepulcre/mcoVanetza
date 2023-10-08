@@ -41,7 +41,7 @@ public:
 
     int rand_traffic_class();
 
-    Application* search_port(vanetza::btp::port_type PORT);
+    Application& search_port(vanetza::btp::port_type PORT);
 
     void byte_counter_update(unsigned packet_size);
 

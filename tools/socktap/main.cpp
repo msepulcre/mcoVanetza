@@ -1,4 +1,5 @@
 #include "mco_fac.hpp"
+#include "logs_handler.hpp"
 #include "ethernet_device.hpp"
 #include "benchmark_application.hpp"
 #include "cam_application.hpp"
@@ -13,20 +14,13 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 
-#include <log4cxx/logger.h>
-#include <log4cxx/xml/domconfigurator.h>
-
 using namespace vanetza;
-using namespace log4cxx;
-using namespace log4cxx::xml;
-using namespace log4cxx::helpers;
+using namespace Logging;
 
 namespace asio = boost::asio;
 namespace gn = vanetza::geonet;
 namespace po = boost::program_options;
 
-
-LoggerPtr loggerMyMain(Logger::getLogger( "main"));
 
 int main(int argc, const char** argv)
 {
@@ -60,8 +54,6 @@ int main(int argc, const char** argv)
     ;
     add_positioning_options(options);
     add_security_options(options);
-
-    DOMConfigurator::configure("/usr/local/src/Log4cxxConfig.xml");
 
     po::positional_options_description positional_options;
     positional_options.add("interface", 1);
@@ -185,8 +177,6 @@ int main(int argc, const char** argv)
             }
 
             
-            /* LOG4CXX_INFO(loggerMyMain, "Logger en el main"); */
-            
             if (app_name == "ca") {
 
                     int num_ca = vm["num_ca"].as<int>();
@@ -214,16 +204,24 @@ int main(int argc, const char** argv)
                         str_num = std::to_string(4);
 
                     }
-                    std::string cam_interval_i = "cam-min-interval"+str_num;
+                    std::string cam_min_interval_i = "cam-min-interval"+str_num;
                     std::string cam_traffic_class_i = "cam-traffic-class"+str_num;
                     
-                    ca->set_interval(std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
+                    ca->set_interval(std::chrono::milliseconds(vm[cam_min_interval_i].as<unsigned>()));
                     ca->print_received_message(vm.count("print-rx-cam") > 0);
                     ca->print_generated_message(vm.count("print-tx-cam") > 0);
                     
+                    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
+                    pLogger = LogsHandler::getInstance();
+                    struct timeval te;
+                    gettimeofday(&te,NULL);
+                    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
+                    std::stringstream ss;
+                    ss << " Instante actual = " << current_time;
+                    pLogger->info(ss.str().c_str());
 
                     if(use_mco != 0){
-                        mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_interval_i].as<unsigned>()));
+                        mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_min_interval_i].as<unsigned>()));
 
                         int traffic_class = vm[cam_traffic_class_i].as<int>();
 
