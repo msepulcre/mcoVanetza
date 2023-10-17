@@ -17,7 +17,7 @@ using namespace vanetza::facilities;
 using namespace std::chrono;
 
 CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runtime& rt, int use_mco) :
-   mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(1)), use_mco_(use_mco)
+   mco_(mco), positioning_(positioning), runtime_(rt), cam_interval_(seconds(60)), use_mco_(use_mco)
 {
     PORT_number = mco_.my_list.size();
 
@@ -39,6 +39,7 @@ CamApplication::CamApplication(McoFac& mco, PositionProvider& positioning, Runti
 
 void CamApplication::set_interval(Clock::duration interval)
 {
+    std::cout << "Pasa por set interval de cam_application" << std::endl;
     cam_interval_ = interval;
     runtime_.cancel(this);
     schedule_timer();

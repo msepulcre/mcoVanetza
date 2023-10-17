@@ -33,10 +33,10 @@ int main(int argc, const char** argv)
         ("require-gnss-fix", "Suppress transmissions while GNSS position fix is missing")
         ("gn-version", po::value<unsigned>()->default_value(1), "GeoNetworking protocol version to use.")
         ("cam-min-interval0", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
-        ("cam-min-interval1", po::value<unsigned>()->default_value(200), "The first CAM sending interval in milliseconds and the minimum interval.")
-        ("cam-min-interval2", po::value<unsigned>()->default_value(300), "The first CAM sending interval in milliseconds and the minimum interval.")
-        ("cam-min-interval3", po::value<unsigned>()->default_value(400), "The first CAM sending interval in milliseconds and the minimum interval.")
-        ("cam-min-interval4", po::value<unsigned>()->default_value(500), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval1", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval2", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval3", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
+        ("cam-min-interval4", po::value<unsigned>()->default_value(100), "The first CAM sending interval in milliseconds and the minimum interval.")
         ("cam-traffic-class0", po::value<int>()->default_value(0), "CAM's traffic class")
         ("cam-traffic-class1", po::value<int>()->default_value(1), "CAM's traffic class")
         ("cam-traffic-class2", po::value<int>()->default_value(2), "CAM's traffic class")
@@ -45,7 +45,7 @@ int main(int argc, const char** argv)
         ("cbr,c", po::value<double>()->default_value(0.8), "CBR")
         ("cbr_target,ct", po::value<double>()->default_value(0.68), "CBR target")
         ("use-mco", po::value<int>()->default_value(1), "Ejecutar con mco (!= 0) o sin mco (= 0)")
-        ("num_ca, n", po::value<int>()->default_value(11), "number of application CA")
+        ("num_ca, n", po::value<int>()->default_value(5), "number of application CA")
         ("print-rx-cam", "Print received CAMs")
         ("print-tx-cam", "Print generated CAMs")
         ("benchmark", "Enable benchmarking")
@@ -210,15 +210,6 @@ int main(int argc, const char** argv)
                     ca->set_interval(std::chrono::milliseconds(vm[cam_min_interval_i].as<unsigned>()));
                     ca->print_received_message(vm.count("print-rx-cam") > 0);
                     ca->print_generated_message(vm.count("print-tx-cam") > 0);
-                    
-                    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
-                    pLogger = LogsHandler::getInstance();
-                    struct timeval te;
-                    gettimeofday(&te,NULL);
-                    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
-                    std::stringstream ss;
-                    ss << " Instante actual = " << current_time;
-                    pLogger->info(ss.str().c_str());
 
                     if(use_mco != 0){
                         mco->set_min_interval(ca->port(), std::chrono::milliseconds(vm[cam_min_interval_i].as<unsigned>()));

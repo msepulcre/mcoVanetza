@@ -39,7 +39,7 @@ public:
 
     void set_adapt_interval();
 
-    int rand_traffic_class();
+    int rand_number();
 
     Application& search_port(vanetza::btp::port_type PORT);
 
@@ -56,6 +56,8 @@ public:
     void set_traffic_class(int traffic_class);
 
     void set_traffic_class(int traffic_class, vanetza::btp::port_type PORT);
+
+    void apps_set_interval(McoAppRegister& iter_app, int64_t update_interval);
 
     double adapt_delta;
 

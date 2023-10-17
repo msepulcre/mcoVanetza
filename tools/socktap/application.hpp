@@ -26,7 +26,9 @@ public:
 
     virtual PortType port() = 0;
     virtual PromiscuousHook* promiscuous_hook();
-    
+    virtual void set_interval(vanetza::Clock::duration) {};
+
+
 protected:
     DataConfirm request(const DataRequest&, DownPacketPtr);
     DataConfirm request(const DataRequest&, DownPacketPtr, PortType PORT);

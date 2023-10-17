@@ -18,7 +18,7 @@ public:
 
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
-    void set_interval(vanetza::Clock::duration);
+    void set_interval(vanetza::Clock::duration) override;
     void print_received_message(bool flag);
     void print_generated_message(bool flag);
 

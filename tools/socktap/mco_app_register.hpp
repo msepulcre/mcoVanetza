@@ -40,7 +40,7 @@ public:
     Application& application_;
     
     McoAppRegister(vanetza::Clock::duration& interval, Application& application);
-    McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, int traffic_class, Application& application);
+    McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, Application& application);
     McoAppRegister(McoAppRegister *appCopied);
     McoAppRegister(PortType PORT, float size, int64_t time, vanetza::Clock::duration& interval, Application& application);
 

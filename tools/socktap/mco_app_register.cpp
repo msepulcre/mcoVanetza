@@ -13,8 +13,8 @@ interval_(interval), min_interval(interval_.count()), application_(application)
 
 }
 
-McoAppRegister::McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, int traffic_class, Application& application):
-PORT_(PORT) ,interval_(interval), traffic_class_(traffic_class), min_interval(interval_.count()), application_(application)
+McoAppRegister::McoAppRegister(PortType PORT, vanetza::Clock::duration& interval, Application& application):
+PORT_(PORT) ,interval_(interval), min_interval(interval_.count()), application_(application)
 {   
     size_average = 0;
     interval_average = 0;

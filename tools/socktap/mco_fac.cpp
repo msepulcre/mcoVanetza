@@ -1,4 +1,5 @@
 #include "mco_fac.hpp"
+#include "logs_handler.hpp"
 #include <cstring>
 #include <iostream>
 #include <ctime>
@@ -18,8 +19,12 @@ using namespace vanetza;
 using namespace vanetza::facilities;
 using namespace std::chrono;
 
+using namespace Logging;
+
+#define NOT_DEFINED -1;
+
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1)
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(50)), adapt_delta(1) //mco interval es 100 ms
 {
     schedule_timer();
 }
@@ -27,6 +32,15 @@ McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
 McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPacketPtr packet, PortType PORT)
 {
     
+    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
+    pLogger = LogsHandler::getInstance();
+    struct timeval te;
+    gettimeofday(&te,NULL);
+    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
+    std::stringstream ss;
+    ss << "Mensaje enviado por: "<< std::to_string(PORT.get()) << " en el instante actual = " << current_time;
+    pLogger->info(ss.str().c_str());
+
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
 
     byte_counter_update(packet->size());
@@ -62,7 +76,7 @@ void McoFac::register_packet(PortType PORT, float msgSize, int64_t msgTime ){
 
 void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  Application& application){ 
             
-    my_list.push_back(McoAppRegister(PORT, interval_, rand_traffic_class(), application));
+    my_list.push_back(McoAppRegister(PORT, interval_, application));
     std::cout << "Se ha registrado la aplicacion con el puerto: " << PORT << std::endl;
 
     std::cout << "El numero de aplicaciones registradas es: " << my_list.size() << std::endl;
@@ -99,19 +113,26 @@ void McoFac::apps_average_size(){
 
     for(McoAppRegister& iter_app : my_list){
         
-        int num_iter_data = 0;
-        double data_sum = 0;
+        /* if(iter_app.msg_data_list.size() > 0){ */
+            int num_iter_data = 0;
+            double data_sum = 0;
 
-        for(auto iter_data : iter_app.msg_data_list ){
+            for(auto iter_data : iter_app.msg_data_list ){
 
-            data_sum = data_sum + iter_data.msgSize;
-            num_iter_data++;
+                data_sum = data_sum + iter_data.msgSize;
+                num_iter_data++;
 
-        }
+            }
 
-        if(num_iter_data != 0){
-            iter_app.size_average = data_sum / num_iter_data;
-        }
+            if(num_iter_data != 0){
+                iter_app.size_average = data_sum / num_iter_data;
+            }
+        
+        /* }else{
+
+            iter_app.size_average = NOT_DEFINED;
+
+        } */
     }
 
 }
@@ -119,26 +140,33 @@ void McoFac::apps_average_size(){
 void McoFac::apps_average_interval(){
 
     for(McoAppRegister& iter_app :  my_list){
+        
+        /* if(iter_app.msg_data_list.size() > 1){ */
 
-        int num_iter_data = 0;
-        int64_t data_sum = 0;
+            int num_iter_data = 0;
+            int64_t data_sum = 0;
 
-        for(auto iter_data = iter_app.msg_data_list.begin() ; iter_data != iter_app.msg_data_list.end(); iter_data++){
+            for(auto iter_data = iter_app.msg_data_list.begin() ; iter_data != iter_app.msg_data_list.end(); iter_data++){
             
-            auto iter_data_next = iter_data;
-            iter_data_next++;
+                auto iter_data_next = iter_data;
+                iter_data_next++;
 
-            if(iter_data_next != iter_app.msg_data_list.end()){
+                if(iter_data_next != iter_app.msg_data_list.end()){
             
-                data_sum = data_sum + (iter_data_next->msgTime - iter_data->msgTime);
-                num_iter_data++;
+                    data_sum = data_sum + (iter_data_next->msgTime - iter_data->msgTime);
+                    num_iter_data++;
 
+                }
+
+            }   
+            if(num_iter_data != 0){
+                iter_app.interval_average  = data_sum / num_iter_data;
             }
+        /* } else{
 
-        }
-        if(num_iter_data != 0){
-            iter_app.interval_average  = data_sum / num_iter_data;
-        }
+            iter_app.interval_average = NOT_DEFINED;
+
+        } */
     }
 
 }
@@ -151,6 +179,16 @@ void McoFac::calc_adapt_delta(){
 
     double delta_offset = beta *  (CBR_target - CBR);
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
+
+    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
+    pLogger = LogsHandler::getInstance();
+    struct timeval te;
+    gettimeofday(&te,NULL);
+    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
+    std::stringstream ss;
+    ss << "delta: "<< adapt_delta << " instante actual = " << current_time;
+    pLogger->info(ss.str().c_str());
+
     std::cout << "adapt_delta: " << adapt_delta << std::endl;
     
 }
@@ -163,7 +201,7 @@ void McoFac::set_adapt_interval(){
 
         double ACRi = adapt_delta;
 
-        for(int i = 0; (i < 4) && (ACRi != 0) ; i++){ //itera en cada traffic class
+        for(int i = 0; i < 4; i++){ //itera en cada traffic class
 
             double fraction_time = 0;
             
@@ -184,10 +222,13 @@ void McoFac::set_adapt_interval(){
                     if(iter_app.traffic_class_ == i){
                         
                         std::cout << "El intervalo de la aplicacion de puerto " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
-                        iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval);
 
+                        apps_set_interval(iter_app, iter_app.min_interval);
+
+                        /* iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval); */
+                        
                         ACRi -= fraction_time;
-
+                        
                     }
 
                 }
@@ -209,20 +250,33 @@ void McoFac::set_adapt_interval(){
 
                 for(McoAppRegister& iter_app : my_list){
 
-                    if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){ 
-                        //CUIDADO!! si la lista de estadisticas de mensajes se resetea entera antes de este set
-                        //esa aplicacion se saltará este control
+                    if(iter_app.traffic_class_ == i){ 
+
+                        double CREij;
+
+                        double ACRij;
+
+                        if(ACRi == 0 ){
+
+                            ACRij = 0.001;
+
+                        } else{
+                            
+                            CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //us / us
+
+                            ACRij = (CREij / CRi) * ACRi;
+
+                        }
                         
-                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //us / us
-                        //Esto tal vez mejor almacenarlo en el registro de la aplicacion en el anterior for para no tener que calcular el valor 2 veces 
+                        
+                        //minimo de ACRij 0.001
 
-                        double ACRij = (CREij / CRi) * ACRi;
+                        int64_t Tonij = iter_app.size_average / data_speed; //us
 
-                        unsigned Tonij = iter_app.size_average / data_speed; //us
+                        int64_t Toffij = Tonij *((1 - ACRij) / ACRij); //us
 
-                        unsigned Toffij = Tonij *((1 - ACRij) / ACRij); //us
+                        apps_set_interval(iter_app, (Tonij + Toffij));
 
-                        iter_app.interval_ = std::chrono::microseconds(Tonij + Toffij);
 
                     }
 
@@ -238,7 +292,7 @@ void McoFac::set_adapt_interval(){
     
 }
 
-int McoFac::rand_traffic_class(){
+int McoFac::rand_number(){
 
     srand(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 
@@ -266,13 +320,13 @@ Application& McoFac::search_port(vanetza::btp::port_type PORT){
 
 void McoFac::byte_counter_update(unsigned packet_size){
 
-    const unsigned network_header = 0;
+    const unsigned BTP_header = 4;
 
-    const unsigned data_link_header = 0;
+    const unsigned GeoNetworking_header = 60;
 
-    const unsigned transport_header = 0;
+    const unsigned extra_test = 0; //para subir CBR artificialmente
 
-    const unsigned header_size = network_header + data_link_header + transport_header;
+    const unsigned header_size = BTP_header + GeoNetworking_header + extra_test;
 
     packet_size += header_size;
 
@@ -288,7 +342,16 @@ void McoFac::CBR_update(){
 
     CBR = ((time_ocuped / mco_interval_.count()) + CBR) * 0.5;
 
-    std::cout << "CBR: " << CBR << std::endl;
+    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
+    pLogger = LogsHandler::getInstance();
+    struct timeval te;
+    gettimeofday(&te,NULL);
+    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
+    std::stringstream ss;
+    ss << "CBR: "<< CBR << " instante actual: " << current_time;
+    pLogger->info(ss.str().c_str());
+
+    /* std::cout << "CBR: " << CBR << std::endl; */
 
     byte_counter = 0;
 
@@ -336,6 +399,30 @@ void McoFac::set_traffic_class(int traffic_class, vanetza::btp::port_type PORT){
 
     }
 
+}
+
+void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval){
+
+    if(iter_app.interval_.count() > update_interval){ //si el nuevo interval es menor que el antiguo: se para el temporizador
+        
+        iter_app.application_.set_interval(std::chrono::microseconds(update_interval));
+
+    } else{ //si el nuevo interval es mayor: no se para
+
+        iter_app.interval_ = std::chrono::microseconds(update_interval);
+
+    }
+
+    LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
+    pLogger = LogsHandler::getInstance();
+    struct timeval te;
+    gettimeofday(&te,NULL);
+    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
+    std::stringstream ss;
+    ss << "Inervalo de aplicación: "<< iter_app.PORT_ << " fue modificado a: " << update_interval << " en el instante actual = " << current_time;
+    pLogger->info(ss.str().c_str());
+
+    //Podriamos hacer que el temporizador pare si el intervalo nuevo es menor a un 90% del inferior 
 }
 
 void McoFac::set_interval(Clock::duration interval)
