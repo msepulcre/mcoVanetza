@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <sys/time.h>
 
 #include "logs_handler.hpp"
 
@@ -19,25 +20,25 @@ LogsHandler::LogsHandler()
     std::time_t actualTime = std::time(nullptr);
     std::tm* timeInfo = std::localtime(&actualTime);
     char logFileName[80];
-    std::strftime(logFileName, sizeof(logFileName), "inpercept_stack%Y-%m-%d-%H-%M-%S.txt", timeInfo);
+    std::strftime(logFileName, sizeof(logFileName), "inpercept_log.log", timeInfo); //inpercept_stack%Y-%m-%d-%H-%M-%S.txt", timeInfo);
 
     m_File.open(logFileName, ios::out|ios::app);
     m_LogLevel	= LOG_LEVEL_TRACE;
     m_LogType	= FILE_LOG;
-
     // Initialize mutex
 
     int ret=0;
-    ret = pthread_mutexattr_settype(&m_Attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+    ret = pthread_mutexattr_settype(&m_Attr, PTHREAD_MUTEX_ERRORCHECK);
     if(ret != 0)
     {
         printf("LogsHandler::LogsHandler() -- Mutex attribute not initialize!!\n");
         exit(0);
     }
+//    m_Mutex = PTHREAD_MUTEX_INITIALIZER;
     ret = pthread_mutex_init(&m_Mutex,&m_Attr);
     if(ret != 0)
     {
-        printf("LogsHandler::LogsHandler() -- Mutex not initialize!!\n");
+        printf("LogsHandler::LogsHandler() %d -- Mutex not initialize!!\n", ret);
         exit(0);
     }
 }
@@ -70,7 +71,7 @@ void LogsHandler::unlock()
     pthread_mutex_unlock(&m_Mutex);
 }
 
-void LogsHandler::logIntoFile(std::string& data)
+void LogsHandler::logIntoFile(std::string& data) //aqui se cambia getCurrentTime
 {
     lock();
     m_File << getCurrentTime() << "  " << data << endl;
@@ -84,15 +85,23 @@ void LogsHandler::logOnConsole(std::string& data)
 
 string LogsHandler::getCurrentTime()
 {
-    string currTime;
-    //Current date/time based on current time
-    time_t now = time(0);
-    // Convert current time to string
-    currTime.assign(ctime(&now));
+//    string currTime;
+//    //Current date/time based on current time
+//    time_t now = time(0);
+//    // Convert current time to string
+//    currTime.assign(ctime(&now));
+//
+//    // Last charactor of currentTime is "\n", so remove it
+//    string currentTime = currTime.substr(0, currTime.size()-1);
+    long long current_time;
+    struct timeval te;
+    gettimeofday(&te,NULL);
+    current_time=te.tv_sec*1000000LL+te.tv_usec;
+    std::stringstream ss;
+    ss << current_time;
 
-    // Last charactor of currentTime is "\n", so remove it
-    string currentTime = currTime.substr(0, currTime.size()-1);
-    return currentTime;
+    //return to_string(current_time);
+    return ss.str();
 }
 
 // Interface for Error Log

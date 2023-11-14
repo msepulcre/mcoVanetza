@@ -24,7 +24,7 @@ using namespace Logging;
 #define NOT_DEFINED -1;
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(50)), adapt_delta(1) //mco interval es 100 ms
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1) //mco interval es 100 ms
 {
     schedule_timer();
 }
@@ -36,9 +36,8 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     pLogger = LogsHandler::getInstance();
     struct timeval te;
     gettimeofday(&te,NULL);
-    long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "Mensaje enviado por: "<< std::to_string(PORT.get()) << " en el instante actual = " << current_time;
+    ss << "Transmision de"<< PORT.get() << ","<< 1;
     pLogger->info(ss.str().c_str());
 
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
@@ -180,13 +179,19 @@ void McoFac::calc_adapt_delta(){
     double delta_offset = beta *  (CBR_target - CBR);
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
 
+    if(adapt_delta < 0){
+        
+        adapt_delta = 0;
+
+    }
+
     LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
     pLogger = LogsHandler::getInstance();
     struct timeval te;
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "delta: "<< adapt_delta << " instante actual = " << current_time;
+    ss << "Delta," << adapt_delta ;
     pLogger->info(ss.str().c_str());
 
     std::cout << "adapt_delta: " << adapt_delta << std::endl;
@@ -198,8 +203,8 @@ void McoFac::set_adapt_interval(){
     const double data_speed = 0.75; // byte/us
 
     if(my_list.size() != 0){
-
-        double ACRi = adapt_delta;
+        
+        double ACRi = adapt_delta;   
 
         for(int i = 0; i < 4; i++){ //itera en cada traffic class
 
@@ -220,12 +225,8 @@ void McoFac::set_adapt_interval(){
                 for(McoAppRegister& iter_app : my_list){
 
                     if(iter_app.traffic_class_ == i){
-                        
-                        std::cout << "El intervalo de la aplicacion de puerto " << iter_app.PORT_ << " se modificó a: " << iter_app.min_interval << std::endl;
 
                         apps_set_interval(iter_app, iter_app.min_interval);
-
-                        /* iter_app.interval_ = std::chrono::microseconds(iter_app.min_interval); */
                         
                         ACRi -= fraction_time;
                         
@@ -258,7 +259,10 @@ void McoFac::set_adapt_interval(){
 
                         if(ACRi == 0 ){
 
-                            ACRij = 0.001;
+                            //ACRij = 0.001; // esto es dejar mas fraccion de tiempo que el maximo permitido por app (0.0005467)
+
+                            apps_set_interval(iter_app, 9999999999); //provisional
+
 
                         } else{
                             
@@ -266,17 +270,13 @@ void McoFac::set_adapt_interval(){
 
                             ACRij = (CREij / CRi) * ACRi;
 
+                            int64_t Tonij = iter_app.size_average / data_speed; //us
+
+                            int64_t Toffij = Tonij *((1 - ACRij) / ACRij); //us
+
+                            apps_set_interval(iter_app, (Tonij + Toffij));
                         }
                         
-                        
-                        //minimo de ACRij 0.001
-
-                        int64_t Tonij = iter_app.size_average / data_speed; //us
-
-                        int64_t Toffij = Tonij *((1 - ACRij) / ACRij); //us
-
-                        apps_set_interval(iter_app, (Tonij + Toffij));
-
 
                     }
 
@@ -336,11 +336,11 @@ void McoFac::byte_counter_update(unsigned packet_size){
 
 void McoFac::CBR_update(){
 
-    const double data_speed = 0.75; // bytes/microseconds
+    const double data_speed = (6.0/8.0); // bytes/microseconds (6Mbps)
 
-    double time_ocuped = byte_counter / data_speed; //microseconds
+    double CBR_meassured = (byte_counter / data_speed)/mco_interval_.count(); //microseconds
 
-    CBR = ((time_ocuped / mco_interval_.count()) + CBR) * 0.5;
+    CBR = (CBR_meassured + CBR) * 0.5;
 
     LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
     pLogger = LogsHandler::getInstance();
@@ -348,10 +348,10 @@ void McoFac::CBR_update(){
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "CBR: "<< CBR << " instante actual: " << current_time;
+    ss <<"CBR," << CBR;
     pLogger->info(ss.str().c_str());
 
-    /* std::cout << "CBR: " << CBR << std::endl; */
+    std::cout << "CBR: " << CBR << std::endl;
 
     byte_counter = 0;
 
@@ -413,13 +413,15 @@ void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval
 
     }
 
+    std::cout << "El intervalo de la aplicacion " << iter_app.PORT_ << " es " << update_interval << std::endl;
+
     LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
     pLogger = LogsHandler::getInstance();
     struct timeval te;
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "Inervalo de aplicación: "<< iter_app.PORT_ << " fue modificado a: " << update_interval << " en el instante actual = " << current_time;
+    ss << "Intervalo de "<< iter_app.PORT_ << "," << update_interval;
     pLogger->info(ss.str().c_str());
 
     //Podriamos hacer que el temporizador pare si el intervalo nuevo es menor a un 90% del inferior 
@@ -483,9 +485,9 @@ void McoFac::on_timer(Clock::time_point)
     
     apps_average_interval();
 
-    calc_adapt_delta();
-
     CBR_update();
+
+    calc_adapt_delta();
 
     set_adapt_interval();
 

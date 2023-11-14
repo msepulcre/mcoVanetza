@@ -46,3 +46,14 @@ else
     fi
 
 fi
+
+if [ "$4" == "l" ]; then
+
+    sudo sleep 300
+    for((i = 1; i <= $1; i++)); do
+    
+        sudo docker cp socktap$i:/home/build-user/inpercept_log.log /home/yeray/Documentos/ipercept$i_log.log
+    
+    done
+    
+fi
