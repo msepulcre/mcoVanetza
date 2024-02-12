@@ -37,7 +37,7 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     struct timeval te;
     gettimeofday(&te,NULL);
     std::stringstream ss;
-    ss << "Transmision de"<< PORT.get() << ","<< 1;
+    ss << "Transmision de "<< PORT.get() << ","<< 1;
     pLogger->info(ss.str().c_str());
 
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
@@ -172,7 +172,6 @@ void McoFac::apps_average_interval(){
 
 void McoFac::calc_adapt_delta(){
 
-
     const double alpha = 0.016;
     const double beta = 0.0012;
 
@@ -220,7 +219,7 @@ void McoFac::set_adapt_interval(){
 
             }
 
-            if(fraction_time <= ACRi){ //si la fraccion de tiempo que se pide es menor que la que se ofrece:
+            if(fraction_time < ACRi){ //si la fraccion de tiempo que se pide es menor que la que se ofrece:
 
                 for(McoAppRegister& iter_app : my_list){
 
@@ -228,11 +227,10 @@ void McoFac::set_adapt_interval(){
 
                         apps_set_interval(iter_app, iter_app.min_interval);
                         
-                        ACRi -= fraction_time;
-                        
                     }
 
                 }
+                ACRi -= fraction_time;
 
             } else{ //si es mayor
                 double CRi = 0;
@@ -324,7 +322,13 @@ void McoFac::byte_counter_update(unsigned packet_size){
 
     const unsigned GeoNetworking_header = 60;
 
-    const unsigned extra_test = 0; //para subir CBR artificialmente
+    const unsigned extra_test = 795; //para subir CBR artificialmente
+
+    //CBR = 10% -> extra_test = 0
+    //CBR = 30% -> extra_test = 195
+    //CBR = 50% -> extra_test = 395
+    //CBR = 70% -> extra_test = 595
+    //CBR = 90% -> extra_test = 795
 
     const unsigned header_size = BTP_header + GeoNetworking_header + extra_test;
 

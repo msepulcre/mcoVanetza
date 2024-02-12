@@ -30,7 +30,8 @@ if [ "$1" == "1" ]; then
 else
 
     for((i = 1; i <= $1; i++)); do
-    
+
+        # TODO poner sleep de 100 ms / numero de contenedores
         sudo docker run -d -v /usr/local/src/socktap$i:/usr/local/src/socktap --name socktap$i --network bridge socktap-docker
 
 
@@ -40,7 +41,7 @@ else
 
         for((i = 1; i <= $1; i++)); do
     
-            gnome-terminal --tab --title="Termianl de Socktap$i" -- bash -c "sudo docker logs -f socktap$i; exec bash"
+            gnome-terminal --tab --title="Terminal de Socktap$i" -- bash -c "sudo docker logs -f socktap$i; exec bash"
 
         done
     fi
@@ -51,9 +52,10 @@ if [ "$4" == "l" ]; then
 
     sudo sleep 300
     for((i = 1; i <= $1; i++)); do
-    
-        sudo docker cp socktap$i:/home/build-user/inpercept_log.log /home/yeray/Documentos/ipercept$i_log.log
+
+        sudo docker cp socktap$i:/home/build-user/inpercept_log.log /home/yeray/Documentos/inpercept$i.log
     
     done
+
     
 fi
