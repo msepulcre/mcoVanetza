@@ -152,11 +152,9 @@ int main(int argc, const char** argv)
         context.set_link_layer(link_layer.get());
         
         
-
         std::unique_ptr<McoFac> mco;
         
         if(use_mco != 0){
-
             mco = std::make_unique<McoFac>(*positioning, trigger.runtime());
 
             float CBR = vm["cbr"].as<double>();
@@ -165,8 +163,6 @@ int main(int argc, const char** argv)
             mco->CBR = CBR;
             mco->CBR_target = CBR_target;
         }
-
-        
 
 
         std::map<std::string, std::unique_ptr<Application>> apps;

@@ -67,8 +67,8 @@ void McoFac::register_packet(PortType PORT, float msgSize, int64_t msgTime ){
 
     app_registered->msg_data_list.push_back({msgSize, msgTime});
 
-    std::cout << "El tamaño de la lista de datos de la aplicacion cuyo puerto es " << app_registered->PORT_ << " es " 
-    << app_registered->msg_data_list.size() << std::endl;
+    /* std::cout << "El tamaño de la lista de datos de la aplicacion cuyo puerto es " << app_registered->PORT_ << " es " 
+    << app_registered->msg_data_list.size() << std::endl; */
     
 
 }
@@ -118,7 +118,8 @@ void McoFac::apps_average_size(){
 
             for(auto iter_data : iter_app.msg_data_list ){
 
-                data_sum = data_sum + iter_data.msgSize;
+                //se añaden las cabeceras de niveles inferiores y extra_test
+                data_sum = data_sum + iter_data.msgSize + BTP_header + GeoNetworking_header + extra_test; 
                 num_iter_data++;
 
             }
@@ -126,7 +127,7 @@ void McoFac::apps_average_size(){
             if(num_iter_data != 0){
                 iter_app.size_average = data_sum / num_iter_data;
             }
-        
+
         /* }else{
 
             iter_app.size_average = NOT_DEFINED;
@@ -176,6 +177,14 @@ void McoFac::calc_adapt_delta(){
     const double beta = 0.0012;
 
     double delta_offset = beta *  (CBR_target - CBR);
+
+    if(delta_offset < -0.00025){
+        delta_offset = -0.00025;
+    }
+    if(delta_offset > 0.0005){
+        delta_offset = 0.0005;
+    }
+
     adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
 
     if(adapt_delta < 0){
@@ -239,7 +248,7 @@ void McoFac::set_adapt_interval(){
 
                     if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
-                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average));
+                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //hay que sumar el extra test y las cabeceras?
                         //recursos consumidos por aplicacion j de traffic class i
                         CRi += CREij;
                         //recursos totales consumidos por traffic class i
@@ -316,22 +325,9 @@ Application& McoFac::search_port(vanetza::btp::port_type PORT){
     return *application; //no deberia devolver nunca este, en cuyo caso, la aplicacion buscada no existe
 }
 
-void McoFac::byte_counter_update(unsigned packet_size){
-
-    const unsigned BTP_header = 4;
-
-    const unsigned GeoNetworking_header = 60;
-
-    const unsigned extra_test = 795; //para subir CBR artificialmente
-
-    //CBR = 10% -> extra_test = 0
-    //CBR = 30% -> extra_test = 195
-    //CBR = 50% -> extra_test = 395
-    //CBR = 70% -> extra_test = 595
-    //CBR = 90% -> extra_test = 795
+void McoFac::byte_counter_update(unsigned packet_size){ //para que el CBR pueda ser calculado
 
     const unsigned header_size = BTP_header + GeoNetworking_header + extra_test;
-
     packet_size += header_size;
 
     byte_counter += packet_size;
@@ -495,10 +491,4 @@ void McoFac::on_timer(Clock::time_point)
 
     set_adapt_interval();
 
-
-
-    // clean
-    //  cbr = x => delta = y
-    // calc average size and interval
-    // decidir si cada servicio tiene que subir o bajar su tasa y decirselo
 }

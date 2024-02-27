@@ -68,6 +68,16 @@ public:
     unsigned byte_counter;
 
     int apps_number[4] = {0, 0, 0, 0};
+
+    const unsigned BTP_header = 4;
+    const unsigned GeoNetworking_header = 60;
+    const unsigned extra_test = 0; //para subir CBR artificialmente
+    //CBR = 10% -> extra_test = 0
+    //CBR = 30% -> extra_test = 195
+    //CBR = 50% -> extra_test = 395
+    //CBR = 70% -> extra_test = 595
+    //CBR = 90% -> extra_test = 795
+    //Valores para 15 vehiculos y 5 aplicaciones
     
     PortType port() override;
     void indicate(const DataIndication&, UpPacketPtr) override;
