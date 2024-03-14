@@ -32,6 +32,7 @@ else
     for((i = 1; i <= $1; i++)); do
 
         # TODO poner sleep de 100 ms / numero de contenedores
+        sudo sleep 0.0067 #100ms/15 contenedores
         sudo docker run -d -v /usr/local/src/socktap$i:/usr/local/src/socktap --name socktap$i --network bridge socktap-docker
 
 

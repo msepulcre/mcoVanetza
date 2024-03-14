@@ -23,8 +23,22 @@ using namespace Logging;
 
 #define NOT_DEFINED -1;
 
+#define ALPHA 0.016
+#define BETA 0.0012
+#define MCO_INTERVAL 200 //milliseconds
+#define DELTA_BEGINNING 0.5
+#define DELATED_TIME 1000000 //microseconds (1 second)
+#define DELTA_OFFSET_MAX 0.0005
+#define DELTA_OFFSET_MIN -0.00025
+#define DELTA_MAX 0.03
+#define DELTA_MIN 0.0006
+#define DATA_SPEED 0.75 //bytes/microseconds (6 Mbps)
+#define NOT_SEND 9999999999 //microseconds
+#define SCALE 10
+
+
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(100)), adapt_delta(1) //mco interval es 100 ms
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(MCO_INTERVAL)), adapt_delta(DELTA_BEGINNING) //mco interval es 100 ms
 {
     schedule_timer();
 }
@@ -82,9 +96,9 @@ void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  A
 
 }
 
-void McoFac::clean_outdated(){
+void McoFac::clean_outdated(){ // dejar siempre al menos 2 paquetes TODO
 
-    const int delated_time = 5000000; //microseconds
+    const int delated_time = DELATED_TIME; //microseconds
     auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
@@ -173,24 +187,22 @@ void McoFac::apps_average_interval(){
 
 void McoFac::calc_adapt_delta(){
 
-    const double alpha = 0.016;
-    const double beta = 0.0012;
+    double delta_offset = BETA *  (CBR_target - CBR);
 
-    double delta_offset = beta *  (CBR_target - CBR);
-
-    if(delta_offset < -0.00025){
-        delta_offset = -0.00025;
+    if(delta_offset < DELTA_OFFSET_MIN){
+        delta_offset = DELTA_OFFSET_MIN;
     }
-    if(delta_offset > 0.0005){
-        delta_offset = 0.0005;
+    if(delta_offset > DELTA_OFFSET_MAX){
+        delta_offset = DELTA_OFFSET_MAX;
     }
 
-    adapt_delta = (1 - alpha) * adapt_delta + delta_offset;
+    adapt_delta = (1 - ALPHA) * adapt_delta + delta_offset;
 
-    if(adapt_delta < 0){
-        
-        adapt_delta = 0;
-
+    if(adapt_delta > DELTA_MAX){
+        adapt_delta = DELTA_MAX;
+    }
+    if(adapt_delta < DELTA_MIN){
+        adapt_delta = DELTA_MIN;
     }
 
     LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
@@ -208,8 +220,6 @@ void McoFac::calc_adapt_delta(){
 
 void McoFac::set_adapt_interval(){
 
-    const double data_speed = 0.75; // byte/us
-
     if(my_list.size() != 0){
         
         double ACRi = adapt_delta;   
@@ -222,7 +232,7 @@ void McoFac::set_adapt_interval(){
 
                 if(iter_app.traffic_class_ == i){
 
-                    fraction_time += ((iter_app.size_average / data_speed) / (iter_app.min_interval)); // us / us
+                    fraction_time += ((iter_app.size_average / DATA_SPEED) / (iter_app.min_interval)); // us / us
                     // fraccion de tiempo que la clase i pide
                 }
 
@@ -248,7 +258,7 @@ void McoFac::set_adapt_interval(){
 
                     if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
-                        double CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //hay que sumar el extra test y las cabeceras?
+                        double CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_average));
                         //recursos consumidos por aplicacion j de traffic class i
                         CRi += CREij;
                         //recursos totales consumidos por traffic class i
@@ -268,16 +278,16 @@ void McoFac::set_adapt_interval(){
 
                             //ACRij = 0.001; // esto es dejar mas fraccion de tiempo que el maximo permitido por app (0.0005467)
 
-                            apps_set_interval(iter_app, 9999999999); //provisional
+                            apps_set_interval(iter_app, NOT_SEND); //provisional
 
 
                         } else{
                             
-                            CREij = ((iter_app.size_average / data_speed) / (iter_app.interval_average)); //us / us
+                            CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_average)); //us / us
 
                             ACRij = (CREij / CRi) * ACRi;
 
-                            int64_t Tonij = iter_app.size_average / data_speed; //us
+                            int64_t Tonij = iter_app.size_average / DATA_SPEED; //us
 
                             int64_t Toffij = Tonij *((1 - ACRij) / ACRij); //us
 
@@ -336,9 +346,9 @@ void McoFac::byte_counter_update(unsigned packet_size){ //para que el CBR pueda 
 
 void McoFac::CBR_update(){
 
-    const double data_speed = (6.0/8.0); // bytes/microseconds (6Mbps)
+    double CBR_meassured = (byte_counter / DATA_SPEED)/mco_interval_.count(); //microseconds
 
-    double CBR_meassured = (byte_counter / data_speed)/mco_interval_.count(); //microseconds
+    CBR_meassured *= SCALE;
 
     CBR = (CBR_meassured + CBR) * 0.5;
 
