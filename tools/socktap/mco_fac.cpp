@@ -33,12 +33,24 @@ using namespace Logging;
 #define DELTA_MAX 0.03
 #define DELTA_MIN 0.0006
 #define DATA_SPEED 0.75 //bytes/microseconds (6 Mbps)
-#define NOT_SEND 9999999999 //microseconds
-#define SCALE 10
+#define NOT_SEND 2000000 //microseconds (2 seconds)
+#define SCALE 9
+
+#define EXTRA_TEST 0 //para subir CBR artificialmente
+    //CBR = 10% -> extra_test = 0
+    //CBR = 30% -> extra_test = 195
+    //CBR = 50% -> extra_test = 395
+    //CBR = 70% -> extra_test = 595
+    //CBR = 90% -> extra_test = 795
+    //Valores para 15 vehiculos y 5 aplicaciones
+
+
+#define BTP_HEADER 4 //4
+#define GEONETWORKING_HEADER 60 //60
 
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
-    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(MCO_INTERVAL)), adapt_delta(DELTA_BEGINNING) //mco interval es 100 ms
+    positioning_(positioning), runtime_(rt), mco_interval_(milliseconds(MCO_INTERVAL)), adapt_delta(DELTA_BEGINNING) //mco interval es 200 ms
 {
     schedule_timer();
 }
@@ -80,9 +92,6 @@ void McoFac::register_packet(PortType PORT, float msgSize, int64_t msgTime ){
     }
 
     app_registered->msg_data_list.push_back({msgSize, msgTime});
-
-    /* std::cout << "El tamaño de la lista de datos de la aplicacion cuyo puerto es " << app_registered->PORT_ << " es " 
-    << app_registered->msg_data_list.size() << std::endl; */
     
 
 }
@@ -97,16 +106,16 @@ void McoFac::register_app(PortType PORT, vanetza::Clock::duration& interval_,  A
 }
 
 void McoFac::clean_outdated(){ // dejar siempre al menos 2 paquetes TODO
+//recorre paquetes desde mas antiguo a mas reciente (FIFO)
 
-    const int delated_time = DELATED_TIME; //microseconds
     auto current_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     for(auto iter_app = my_list.begin() ; iter_app != my_list.end() ; iter_app++ ){
 
         for(auto iter_data = iter_app->msg_data_list.begin() ; iter_data != iter_app->msg_data_list.end() ;){
 
-            if(current_time - iter_data->msgTime > delated_time){
-
+            if((current_time - iter_data->msgTime > DELATED_TIME)&&(iter_app->msg_data_list.size() > 2)){
+                //si el paquete se envio hace mas de 1 s y hay mas de 2 registros en la lista, se borra
                 iter_data = iter_app->msg_data_list.erase(iter_data);
 
             }
@@ -133,7 +142,7 @@ void McoFac::apps_average_size(){
             for(auto iter_data : iter_app.msg_data_list ){
 
                 //se añaden las cabeceras de niveles inferiores y extra_test
-                data_sum = data_sum + iter_data.msgSize + BTP_header + GeoNetworking_header + extra_test; 
+                data_sum = data_sum + iter_data.msgSize + BTP_HEADER + GEONETWORKING_HEADER + EXTRA_TEST; 
                 num_iter_data++;
 
             }
@@ -187,7 +196,7 @@ void McoFac::apps_average_interval(){
 
 void McoFac::calc_adapt_delta(){
 
-    double delta_offset = BETA *  (CBR_target - CBR);
+    double delta_offset = BETA *(CBR_target - CBR);
 
     if(delta_offset < DELTA_OFFSET_MIN){
         delta_offset = DELTA_OFFSET_MIN;
@@ -258,7 +267,7 @@ void McoFac::set_adapt_interval(){
 
                     if((iter_app.traffic_class_ == i) && (iter_app.size_average > 0)){
 
-                        double CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_average));
+                        double CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_.count())); //TODO min_interval por media
                         //recursos consumidos por aplicacion j de traffic class i
                         CRi += CREij;
                         //recursos totales consumidos por traffic class i
@@ -278,12 +287,12 @@ void McoFac::set_adapt_interval(){
 
                             //ACRij = 0.001; // esto es dejar mas fraccion de tiempo que el maximo permitido por app (0.0005467)
 
-                            apps_set_interval(iter_app, NOT_SEND); //provisional
+                            apps_set_interval(iter_app, NOT_SEND); 
 
 
                         } else{
                             
-                            CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_average)); //us / us
+                            CREij = ((iter_app.size_average / DATA_SPEED) / (iter_app.interval_.count())); //us / us
 
                             ACRij = (CREij / CRi) * ACRi;
 
@@ -337,7 +346,7 @@ Application& McoFac::search_port(vanetza::btp::port_type PORT){
 
 void McoFac::byte_counter_update(unsigned packet_size){ //para que el CBR pueda ser calculado
 
-    const unsigned header_size = BTP_header + GeoNetworking_header + extra_test;
+    const unsigned header_size = BTP_HEADER+ GEONETWORKING_HEADER + EXTRA_TEST;
     packet_size += header_size;
 
     byte_counter += packet_size;
@@ -413,11 +422,15 @@ void McoFac::set_traffic_class(int traffic_class, vanetza::btp::port_type PORT){
 
 void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval){
 
+    if(update_interval > NOT_SEND){
+        update_interval = NOT_SEND;
+    }
+
     if(iter_app.interval_.count() > update_interval){ //si el nuevo interval es menor que el antiguo: se para el temporizador
         
         iter_app.application_.set_interval(std::chrono::microseconds(update_interval));
 
-    } else{ //si el nuevo interval es mayor: no se para
+    } else{ //si el nuevo interval es mayor o igual: no se para
 
         iter_app.interval_ = std::chrono::microseconds(update_interval);
 
