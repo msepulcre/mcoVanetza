@@ -47,6 +47,7 @@ using namespace Logging;
 
 #define BTP_HEADER 4 //4
 #define GEONETWORKING_HEADER 60 //60
+# define INSTANT_SEND 1000 //1ms
 
 
 McoFac::McoFac(PositionProvider& positioning, Runtime& rt) :
@@ -134,28 +135,23 @@ void McoFac::clean_outdated(){ // dejar siempre al menos 2 paquetes TODO
 void McoFac::apps_average_size(){
 
     for(McoAppRegister& iter_app : my_list){
+
+        int num_iter_data = 0;
+        double data_sum = 0;
+
+        for(auto iter_data : iter_app.msg_data_list ){
+
+            //se añaden las cabeceras de niveles inferiores y extra_test
+            data_sum = data_sum + iter_data.msgSize + BTP_HEADER + GEONETWORKING_HEADER + EXTRA_TEST; 
+            num_iter_data++;
+
+        }
+
+        if(num_iter_data != 0){
+            iter_app.size_average = data_sum / num_iter_data;
+        }
+
         
-        /* if(iter_app.msg_data_list.size() > 0){ */
-            int num_iter_data = 0;
-            double data_sum = 0;
-
-            for(auto iter_data : iter_app.msg_data_list ){
-
-                //se añaden las cabeceras de niveles inferiores y extra_test
-                data_sum = data_sum + iter_data.msgSize + BTP_HEADER + GEONETWORKING_HEADER + EXTRA_TEST; 
-                num_iter_data++;
-
-            }
-
-            if(num_iter_data != 0){
-                iter_app.size_average = data_sum / num_iter_data;
-            }
-
-        /* }else{
-
-            iter_app.size_average = NOT_DEFINED;
-
-        } */
     }
 
 }
@@ -164,32 +160,26 @@ void McoFac::apps_average_interval(){
 
     for(McoAppRegister& iter_app :  my_list){
         
-        /* if(iter_app.msg_data_list.size() > 1){ */
+        int num_iter_data = 0;
+        int64_t data_sum = 0;
 
-            int num_iter_data = 0;
-            int64_t data_sum = 0;
-
-            for(auto iter_data = iter_app.msg_data_list.begin() ; iter_data != iter_app.msg_data_list.end(); iter_data++){
+        for(auto iter_data = iter_app.msg_data_list.begin() ; iter_data != iter_app.msg_data_list.end(); iter_data++){
             
-                auto iter_data_next = iter_data;
-                iter_data_next++;
+            auto iter_data_next = iter_data;
+            iter_data_next++;
 
-                if(iter_data_next != iter_app.msg_data_list.end()){
+            if(iter_data_next != iter_app.msg_data_list.end()){
             
-                    data_sum = data_sum + (iter_data_next->msgTime - iter_data->msgTime);
-                    num_iter_data++;
+                data_sum = data_sum + (iter_data_next->msgTime - iter_data->msgTime);
+                num_iter_data++;
 
-                }
-
-            }   
-            if(num_iter_data != 0){
-                iter_app.interval_average  = data_sum / num_iter_data;
             }
-        /* } else{
 
-            iter_app.interval_average = NOT_DEFINED;
-
-        } */
+        }   
+        if(num_iter_data != 0){
+            iter_app.interval_average  = data_sum / num_iter_data;
+        }
+        
     }
 
 }
@@ -426,15 +416,17 @@ void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval
         update_interval = NOT_SEND;
     }
 
-    if(iter_app.interval_.count() > update_interval){ //si el nuevo interval es menor que el antiguo: se para el temporizador
+    int64_t present_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    if(present_time > iter_app.msg_data_list.back().msgTime + update_interval){
+        iter_app.application_.set_interval(std::chrono::microseconds(INSTANT_SEND)); //para el temporizador y transmite al instante (1ms)
         
-        iter_app.application_.set_interval(std::chrono::microseconds(update_interval));
-
-    } else{ //si el nuevo interval es mayor o igual: no se para
-
-        iter_app.interval_ = std::chrono::microseconds(update_interval);
-
+    }else{
+        iter_app.application_.set_interval(std::chrono::microseconds(iter_app.msg_data_list.back().msgTime + update_interval - present_time));
+        //para el temporizador y transmite en un tiempo total de update_interval
     }
+    //entre el set interval y el interval_ = pasan 8-10 microsegundos
+    iter_app.interval_ = std::chrono::microseconds(update_interval); // no para el temporizador, se actualiza el intervalo 
 
     std::cout << "El intervalo de la aplicacion " << iter_app.PORT_ << " es " << update_interval << std::endl;
 
@@ -447,7 +439,6 @@ void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval
     ss << "Intervalo de "<< iter_app.PORT_ << "," << update_interval;
     pLogger->info(ss.str().c_str());
 
-    //Podriamos hacer que el temporizador pare si el intervalo nuevo es menor a un 90% del inferior 
 }
 
 void McoFac::set_interval(Clock::duration interval)
