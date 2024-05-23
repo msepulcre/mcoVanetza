@@ -27,7 +27,7 @@ using namespace Logging;
 #define BETA 0.0012
 #define MCO_INTERVAL 200 //milliseconds
 #define DELTA_BEGINNING 0.5
-#define DELATED_TIME 1000000 //microseconds (1 second)
+#define DELETED_TIME 1000000 //microseconds (1 second)
 #define DELTA_OFFSET_MAX 0.0005
 #define DELTA_OFFSET_MIN -0.00025
 #define DELTA_MAX 0.03
@@ -35,16 +35,6 @@ using namespace Logging;
 #define DATA_SPEED 0.75 //bytes/microseconds (6 Mbps)
 #define NOT_SEND 2000000 //microseconds (2 seconds)
 #define SCALE 9
-
-#define EXTRA_TEST 0 //para subir CBR artificialmente
-    //CBR = 10% -> extra_test = 0
-    //CBR = 30% -> extra_test = 195
-    //CBR = 50% -> extra_test = 395
-    //CBR = 70% -> extra_test = 595
-    //CBR = 90% -> extra_test = 795
-    //Valores para 15 vehiculos y 5 aplicaciones
-
-
 #define BTP_HEADER 4 //4
 #define GEONETWORKING_HEADER 60 //60
 # define INSTANT_SEND 1000 //1ms
@@ -64,7 +54,7 @@ McoFac::DataConfirm McoFac::mco_data_request(const DataRequest& request, DownPac
     struct timeval te;
     gettimeofday(&te,NULL);
     std::stringstream ss;
-    ss << "Transmision de "<< PORT.get() << ","<< 1;
+    ss << "Transmission "<< PORT.get();
     pLogger->info(ss.str().c_str());
 
     DataConfirm confirm(DataConfirm::ResultCode::Rejected_Unspecified);
@@ -115,7 +105,7 @@ void McoFac::clean_outdated(){ // dejar siempre al menos 2 paquetes TODO
 
         for(auto iter_data = iter_app->msg_data_list.begin() ; iter_data != iter_app->msg_data_list.end() ;){
 
-            if((current_time - iter_data->msgTime > DELATED_TIME)&&(iter_app->msg_data_list.size() > 2)){
+            if((current_time - iter_data->msgTime > DELETED_TIME)&&(iter_app->msg_data_list.size() > 2)){
                 //si el paquete se envio hace mas de 1 s y hay mas de 2 registros en la lista, se borra
                 iter_data = iter_app->msg_data_list.erase(iter_data);
 
@@ -141,8 +131,8 @@ void McoFac::apps_average_size(){
 
         for(auto iter_data : iter_app.msg_data_list ){
 
-            //se añaden las cabeceras de niveles inferiores y extra_test
-            data_sum = data_sum + iter_data.msgSize + BTP_HEADER + GEONETWORKING_HEADER + EXTRA_TEST; 
+            //se añaden las cabeceras de niveles inferiores
+            data_sum = data_sum + iter_data.msgSize + BTP_HEADER + GEONETWORKING_HEADER; 
             num_iter_data++;
 
         }
@@ -210,10 +200,8 @@ void McoFac::calc_adapt_delta(){
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "Delta," << adapt_delta ;
+    ss << "Delta " << adapt_delta ;
     pLogger->info(ss.str().c_str());
-
-    std::cout << "adapt_delta: " << adapt_delta << std::endl;
     
 }
 
@@ -275,10 +263,7 @@ void McoFac::set_adapt_interval(){
 
                         if(ACRi == 0 ){
 
-                            //ACRij = 0.001; // esto es dejar mas fraccion de tiempo que el maximo permitido por app (0.0005467)
-
                             apps_set_interval(iter_app, NOT_SEND); 
-
 
                         } else{
                             
@@ -334,9 +319,9 @@ Application& McoFac::search_port(vanetza::btp::port_type PORT){
     return *application; //no deberia devolver nunca este, en cuyo caso, la aplicacion buscada no existe
 }
 
-void McoFac::byte_counter_update(unsigned packet_size){ //para que el CBR pueda ser calculado
+void McoFac::byte_counter_update(unsigned packet_size){
 
-    const unsigned header_size = BTP_HEADER+ GEONETWORKING_HEADER + EXTRA_TEST;
+    const unsigned header_size = BTP_HEADER+ GEONETWORKING_HEADER;
     packet_size += header_size;
 
     byte_counter += packet_size;
@@ -357,10 +342,8 @@ void McoFac::CBR_update(){
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss <<"CBR," << CBR;
+    ss <<"CBR " << CBR;
     pLogger->info(ss.str().c_str());
-
-    std::cout << "CBR: " << CBR << std::endl;
 
     byte_counter = 0;
 
@@ -428,15 +411,13 @@ void McoFac::apps_set_interval(McoAppRegister &iter_app, int64_t update_interval
     //entre el set interval y el interval_ = pasan 8-10 microsegundos
     iter_app.interval_ = std::chrono::microseconds(update_interval); // no para el temporizador, se actualiza el intervalo 
 
-    std::cout << "El intervalo de la aplicacion " << iter_app.PORT_ << " es " << update_interval << std::endl;
-
     LogsHandler* pLogger = NULL; // Create the object pointer for Logger Class
     pLogger = LogsHandler::getInstance();
     struct timeval te;
     gettimeofday(&te,NULL);
     long long current_time=te.tv_sec*1000LL+te.tv_usec/1000;
     std::stringstream ss;
-    ss << "Intervalo de "<< iter_app.PORT_ << "," << update_interval;
+    ss << "Interval "<< iter_app.PORT_ << " " << update_interval;
     pLogger->info(ss.str().c_str());
 
 }
@@ -478,9 +459,6 @@ void McoFac::indicate(const DataIndication& indication, UpPacketPtr packet)
     }
 
     application.indicate(indication, std::move(packet));
-
-    /* std::cout << "MCO " << (cam ? "decodable" : "broken") << " content" << std::endl; */
-    
 }
 
 void McoFac::schedule_timer()

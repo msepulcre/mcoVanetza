@@ -72,7 +72,7 @@ void PortDispatcher::indicate(
     IndicationInterface* handler = nullptr;
 
     if (btp_ind) {
-        if(use_mco_ == 1){
+        if(use_mco_ != 0){
 
             if (btp_ind->source_port) {
                 handler = m_interactive_handlers[btp::ports::MCO];
